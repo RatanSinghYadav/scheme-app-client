@@ -31,8 +31,8 @@ const SchemeColumns = {
     },
     {
       title: 'SM',
-      dataIndex: 'SMCODE',
-      key: 'SMCODE',
+      dataIndex: 'sm',
+      key: 'sm',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <CheckboxFilter
           options={[...new Set(distributors.map(item => item.sm))].map(sm => ({
@@ -52,8 +52,8 @@ const SchemeColumns = {
     },
     {
       title: 'Distributor Code',
-      dataIndex: 'CUSTOMERACCOUNT',
-      key: 'CUSTOMERACCOUNT',
+      dataIndex: 'code',
+      key: 'code',
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <CheckboxFilter
           options={[...new Set(distributors.map(item => item.code))].map(code => ({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Input, 
-  Button, 
+import {
+  Input,
+  Button,
   Checkbox,
   Divider
 } from 'antd';
@@ -19,16 +19,29 @@ const CheckboxFilter = ({
 }) => {
   const [searchText, setSearchText] = useState('');
   const [selectedValues, setSelectedValues] = useState([]);
-  
+
   // Update local state when selectedKeys changes
   useEffect(() => {
     setSelectedValues(selectedKeys || []);
   }, [selectedKeys]);
 
   // Filter options based on search text
-  const filteredOptions = options.filter(option => 
+  const filteredOptions = options.filter(option =>
     String(option.label).toLowerCase().includes(searchText.toLowerCase())
   );
+
+  // Select all filtered options
+  const selectAllFiltered = () => {
+    const filteredValues = filteredOptions.map(option => option.value);
+    setSelectedValues(filteredValues);
+    setSelectedKeys(filteredValues);
+  };
+
+  // Clear all selections
+  const clearAll = () => {
+    setSelectedValues([]);
+    setSelectedKeys([]);
+  };
 
   return (
     <div style={{ padding: 8, width: 220, maxHeight: 500, overflow: 'auto' }}>
@@ -42,70 +55,69 @@ const CheckboxFilter = ({
           style={{ width: '100%' }}
           allowClear
           onPressEnter={() => {
-            const filtered = filteredOptions.map(o => o.value);
-            setSelectedValues(filtered);
-            setSelectedKeys(filtered);
             confirm();
-            onFilter(field, filtered);
+            onFilter(field, selectedValues);
           }}
         />
       </div>
-      
-      <Divider style={{ margin: '8px 0' }} />
-      
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
+
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <Button
           size="small"
-          onClick={() => {
-            const allValues = options.map(o => o.value);
-            setSelectedValues(allValues);
-            setSelectedKeys(allValues);
-          }}
+          onClick={selectAllFiltered}
         >
           Select All
         </Button>
         <Button
           size="small"
-          onClick={() => {
-            setSelectedValues([]);
-            setSelectedKeys([]);
-          }}
+          onClick={clearAll}
         >
           Clear
         </Button>
       </div>
-      
+
+      <Divider style={{ margin: '8px 0' }} />
+
       <div style={{ maxHeight: 250, overflow: 'auto', marginBottom: 8 }}>
-        <Checkbox.Group 
-          options={filteredOptions}
+
+        <Checkbox.Group
           value={selectedValues}
           onChange={values => {
             setSelectedValues(values);
             setSelectedKeys(values);
           }}
-          style={{ display: 'flex', flexDirection: 'column' }}
-        />
+          style={{ width: '100%' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {filteredOptions.map(option => (
+              <Checkbox key={option.value} value={option.value}>
+                {option.label}
+              </Checkbox>
+            ))}
+          </div>
+        </Checkbox.Group>
       </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between' }}>
         <Button
           type="primary"
+          size="small"
           onClick={() => {
             confirm();
             onFilter(field, selectedValues);
           }}
-          size="small"
         >
           OK
         </Button>
         <Button
+          size="small"
           onClick={() => {
             clearFilters();
-            setSelectedValues([]);
             setSearchText('');
+            setSelectedValues([]);
             onFilter(field, []);
           }}
-          size="small"
         >
           Cancel
         </Button>

@@ -79,12 +79,11 @@ const SchemeCreate = () => {
                     const distributorsWithKeys = data.data.map((dist, index) => ({
                         ...dist,
                         key: `dist-${index}`,
-                        code: dist.SMCODE || dist.code || '',
+                        code: dist.CUSTOMERACCOUNT ||  '',
+                        sm: dist.SMCODE || '',
+                        group: dist.CUSTOMERGROUPID || dist.group || '',
                         name: dist.ORGANIZATIONNAME || dist.name || '',
                         city: dist.ADDRESSCITY || dist.city || '',
-                        group: dist.CUSTOMERGROUPID || dist.group || '',
-                        customerAccount: dist.CUSTOMERACCOUNT || '',
-                        sm: dist.SMCODE || dist.sm || 'SM' + (index + 1)
                     }));
                     setDistributors(distributorsWithKeys);
                     setFilteredDistributors(distributorsWithKeys);
@@ -216,12 +215,43 @@ const SchemeCreate = () => {
     };
 
     // Handle discount price for all filtered products
+    // Add this function to calculate discount based on flavour type
+    const calculateDiscountByFlavour = (flavour, discountValue) => {
+        // Convert discount value to number if it's a string
+        const discountAmount = typeof discountValue === 'string' ? parseFloat(discountValue) : discountValue;
+        
+        // Default denominator
+        let denominator = 100;
+        
+        // Apply discount based on flavour type according to the chart
+        switch(flavour?.toUpperCase()) {
+            case 'JUICE':
+            case 'JUICE RGB':
+            case 'SPARKLE JUICE':
+                denominator = 112;
+                break;
+            case 'SPARKLING':
+            case 'SPARKLING RGB':
+                denominator = 140;
+                break;
+            case 'WATER':
+            case 'SMART WATER':
+            case 'SODA':
+            case 'SODA RGB':
+            case 'SCHWEPPES':
+                denominator = 118;
+                break;
+            default:
+                denominator = 100;
+        }
+        
+        // Calculate discount amount based on the formula (discount × 100 / denominator)
+        // This gives us the correct discount value according to the formula
+        return parseFloat(((discountAmount * 100) / denominator).toFixed(2));
+    };
+
+    // Modify the handleDiscountPriceAll function to use flavour-based calculation
     const handleDiscountPriceAll = (value) => {
-        if (value === undefined || value === null) return;
-
-        const price = parseFloat(value);
-        if (isNaN(price) && value !== '0') return;
-
         // Get currently filtered products
         const productsToUpdate = getFilteredProducts();
 
@@ -236,10 +266,24 @@ const SchemeCreate = () => {
         productsToUpdate.forEach(filteredProduct => {
             const index = updatedItems.findIndex(item => item.key === filteredProduct.key);
             if (index !== -1) {
-                updatedItems[index] = {
-                    ...updatedItems[index],
-                    discountPrice: value === '0' ? 0 : price
-                };
+                // If value is empty, remove discount by setting to 0
+                if (value === undefined || value === null || value === '') {
+                    updatedItems[index] = {
+                        ...updatedItems[index],
+                        discountPrice: 0
+                    };
+                } else {
+                    // Calculate discount based on flavour using the user-provided discount value
+                    const discountValue = calculateDiscountByFlavour(
+                        updatedItems[index].flavour, 
+                        value // Use the user-provided discount value instead of MRP
+                    );
+                    
+                    updatedItems[index] = {
+                        ...updatedItems[index],
+                        discountPrice: discountValue
+                    };
+                }
             }
         });
 
@@ -252,7 +296,11 @@ const SchemeCreate = () => {
             return updatedItem || item;
         }));
 
-        message.success(`Discount price of ₹${value} applied to ${productsToUpdate.length} products`);
+        if (value === undefined || value === null || value === '') {
+            message.success(`Discount removed from ${productsToUpdate.length} products`);
+        } else {
+            message.success(`Flavour-based discount applied to ${productsToUpdate.length} products`);
+        }
     };
 
     // Get unique values for a field
@@ -673,16 +721,14 @@ const SchemeCreate = () => {
                     <div>
                         <Space>
                             <Input
-                                placeholder="Discount Price All"
+                                placeholder="Apply Discount"
                                 style={{ width: 150 }}
                                 addonBefore="₹"
-                                type="number"
-                                min={0}
                                 onChange={(e) => {
-                                    if (e.target.value !== '') {
-                                        handleDiscountPriceAll(e.target.value);
-                                    }
+                                    // Apply discount when value changes (including when cleared)
+                                    handleDiscountPriceAll(e.target.value);
                                 }}
+                                allowClear
                             />
                             <Button
                                 type="primary"

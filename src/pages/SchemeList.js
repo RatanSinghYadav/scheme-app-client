@@ -10,32 +10,29 @@ import {
   Spin,
   Row,
   Col,
-  message
+  message,
+  Input,
+  DatePicker
 } from 'antd';
 import {
   PlusOutlined,
-  DownloadOutlined
+  SearchOutlined
 } from '@ant-design/icons';
 import { AuthContext } from '../context/AuthContext';
-import SchemeFilters from '../components/schemes/SchemeFilters';
 import ExportScheme from '../components/schemes/ExportScheme';
 import { formatDate, searchSchemes, filterSchemesByStatus } from '../utils/helpers';
 import { url } from '../utils/constent';
 
 const { Title } = Typography;
+const { RangePicker } = DatePicker;
 
 const SchemeList = () => {
   const { hasRole, currentUser } = useContext(AuthContext);
   const [schemes, setSchemes] = useState([]);
   const [filteredSchemes, setFilteredSchemes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilters, setActiveFilters] = useState({
-    search: '',
-    status: '',
-    startDate: null,
-    endDate: null,
-    distributor: ''
-  });
+  const [searchText, setSearchText] = useState('');
+  const [dateRange, setDateRange] = useState(null);
 
   // Load schemes from API
   useEffect(() => {
@@ -123,25 +120,31 @@ const SchemeList = () => {
     fetchSchemes();
   }, []);
 
-  const handleFilter = (filters) => {
-    setActiveFilters(filters);
+  // Apply search filter
+  const handleSearch = (value) => {
+    setSearchText(value);
+    applyFilters(value, dateRange);
+  };
 
+  // Apply date range filter
+  const handleDateRangeChange = (dates) => {
+    setDateRange(dates);
+    applyFilters(searchText, dates);
+  };
+
+  // Apply all filters
+  const applyFilters = (search, dates) => {
     let filtered = [...schemes];
 
     // Apply search filter
-    if (filters.search) {
-      filtered = searchSchemes(filtered, filters.search);
-    }
-
-    // Apply status filter
-    if (filters.status) {
-      filtered = filterSchemesByStatus(filtered, filters.status);
+    if (search) {
+      filtered = searchSchemes(filtered, search);
     }
 
     // Apply date filters
-    if (filters.startDate && filters.endDate) {
-      const start = new Date(filters.startDate);
-      const end = new Date(filters.endDate);
+    if (dates && dates[0] && dates[1]) {
+      const start = dates[0].startOf('day').toDate();
+      const end = dates[1].endOf('day').toDate();
 
       filtered = filtered.filter(scheme => {
         const schemeDate = new Date(scheme.startDate.split('-').reverse().join('-'));
@@ -149,16 +152,12 @@ const SchemeList = () => {
       });
     }
 
-    // Apply distributor filter
-    if (filters.distributor) {
-      const searchTerm = filters.distributor.toLowerCase();
-      filtered = filtered.filter(scheme =>
-        scheme.distributorName.toLowerCase().includes(searchTerm) ||
-        scheme.distributorCode.toLowerCase().includes(searchTerm)
-      );
-    }
-
     setFilteredSchemes(filtered);
+  };
+
+  // Handle status filter in the table
+  const handleStatusFilter = (value, record) => {
+    return record.status === value;
   };
 
   const columns = [
@@ -217,6 +216,12 @@ const SchemeList = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
+      filters: [
+        { text: 'Verified', value: 'Verified' },
+        { text: 'Pending Verification', value: 'Pending Verification' },
+        { text: 'Rejected', value: 'Rejected' }
+      ],
+      onFilter: handleStatusFilter,
       render: (status) => (
         <Tag color={
           status === 'Verified' ? 'green' :
@@ -260,7 +265,25 @@ const SchemeList = () => {
         </Row>
       </Card>
 
-      <SchemeFilters onFilter={handleFilter} />
+      <Card style={{ marginBottom: '16px' }}>
+        <Row gutter={16} align="middle">
+          <Col xs={24} sm={12} md={8} lg={8}>
+            <Input
+              placeholder="Search schemes..."
+              prefix={<SearchOutlined />}
+              onChange={(e) => handleSearch(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={8}>
+            <RangePicker
+              style={{ width: '100%' }}
+              placeholder={['Start date', 'End date']}
+              onChange={handleDateRangeChange}
+            />
+          </Col>
+        </Row>
+      </Card>
 
       <Card>
         {loading ? (
