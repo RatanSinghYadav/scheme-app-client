@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Typography } from 'antd';
+import { Table, Typography, Button, Space } from 'antd';
 
 const { Text } = Typography;
 
@@ -20,6 +20,20 @@ const DistributorTable = ({
       setSelectedDistributorKeys(selectedRowKeys);
       setSelectedDistributors(selectedRows);
     }
+  };
+
+  // Function to select all filtered distributors
+  const selectAllFiltered = () => {
+    // Get keys of all currently filtered distributors
+    const filteredKeys = filteredDistributors.map(item => item.key);
+    setSelectedDistributorKeys(filteredKeys);
+    setSelectedDistributors(filteredDistributors);
+  };
+
+  // Function to clear all selections
+  const clearAllSelections = () => {
+    setSelectedDistributorKeys([]);
+    setSelectedDistributors([]);
   };
 
   return (

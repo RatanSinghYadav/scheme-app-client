@@ -79,12 +79,11 @@ const SchemeCreate = () => {
                     const distributorsWithKeys = data.data.map((dist, index) => ({
                         ...dist,
                         key: `dist-${index}`,
-                        code: dist.SMCODE || dist.code || '',
+                        code: dist.CUSTOMERACCOUNT ||  '',
+                        sm: dist.SMCODE || '',
+                        group: dist.CUSTOMERGROUPID || dist.group || '',
                         name: dist.ORGANIZATIONNAME || dist.name || '',
                         city: dist.ADDRESSCITY || dist.city || '',
-                        group: dist.CUSTOMERGROUPID || dist.group || '',
-                        customerAccount: dist.CUSTOMERACCOUNT || '',
-                        sm: dist.SMCODE || dist.sm || 'SM' + (index + 1)
                     }));
                     setDistributors(distributorsWithKeys);
                     setFilteredDistributors(distributorsWithKeys);

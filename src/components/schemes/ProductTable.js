@@ -1,23 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Table,
-  Typography,
-  Space,
-  Input,
-  Switch,
-  DatePicker,
-  Button,
-  Popconfirm,
-  Modal,
-  Form,
-  Tooltip,
-  Select
-} from 'antd';
-import {
-  SettingOutlined,
-  EditOutlined,
-  DeleteOutlined
-} from '@ant-design/icons';
+import { Table, Typography, Space, Input, Switch, DatePicker, Button, Popconfirm, Modal, Form, Tooltip, Select } from 'antd';
+import { SettingOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import ColumnManager from './ColumnManager';
 
@@ -36,7 +19,7 @@ const ProductTable = ({
   tableHeight = 400,
   tableWidth = "100%",
   customColumns = [],
-  loading = false 
+  loading = false
 }) => {
   const [editColumnModalVisible, setEditColumnModalVisible] = useState(false);
   const [currentEditColumn, setCurrentEditColumn] = useState(null);
