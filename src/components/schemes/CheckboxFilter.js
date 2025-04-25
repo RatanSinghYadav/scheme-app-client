@@ -32,15 +32,38 @@ const CheckboxFilter = ({
 
   // Select all filtered options
   const selectAllFiltered = () => {
+    // Get values of all filtered options
     const filteredValues = filteredOptions.map(option => option.value);
-    setSelectedValues(filteredValues);
-    setSelectedKeys(filteredValues);
+    
+    // Combine with existing selections (avoiding duplicates)
+    const combinedValues = [...new Set([...selectedValues, ...filteredValues])];
+    
+    setSelectedValues(combinedValues);
+    setSelectedKeys(combinedValues);
   };
 
   // Clear all selections
   const clearAll = () => {
     setSelectedValues([]);
     setSelectedKeys([]);
+  };
+
+  // Handle individual checkbox change
+  const handleCheckboxChange = (values) => {
+    // Get the currently visible checkboxes
+    const visibleValues = filteredOptions.map(option => option.value);
+    
+    // Find which values from the visible options are selected
+    const selectedVisibleValues = values.filter(value => visibleValues.includes(value));
+    
+    // Find which values from the previous selection are not visible (to keep them)
+    const selectedHiddenValues = selectedValues.filter(value => !visibleValues.includes(value));
+    
+    // Combine visible selections with hidden selections
+    const newSelectedValues = [...selectedHiddenValues, ...selectedVisibleValues];
+    
+    setSelectedValues(newSelectedValues);
+    setSelectedKeys(newSelectedValues);
   };
 
   return (
@@ -61,7 +84,6 @@ const CheckboxFilter = ({
         />
       </div>
 
-
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <Button
           size="small"
@@ -80,13 +102,11 @@ const CheckboxFilter = ({
       <Divider style={{ margin: '8px 0' }} />
 
       <div style={{ maxHeight: 250, overflow: 'auto', marginBottom: 8 }}>
-
         <Checkbox.Group
-          value={selectedValues}
-          onChange={values => {
-            setSelectedValues(values);
-            setSelectedKeys(values);
-          }}
+          value={selectedValues.filter(value => 
+            filteredOptions.some(option => option.value === value)
+          )}
+          onChange={handleCheckboxChange}
           style={{ width: '100%' }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>

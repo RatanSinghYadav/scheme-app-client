@@ -34,6 +34,16 @@ const SchemeList = () => {
   const [searchText, setSearchText] = useState('');
   const [dateRange, setDateRange] = useState(null);
 
+  // Add pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+    showSizeChanger: true,
+    pageSizeOptions: ['10', '20', '30', '50'],
+    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`
+  });
+
   // Load schemes from API
   useEffect(() => {
     const fetchSchemes = async () => {
@@ -72,22 +82,22 @@ const SchemeList = () => {
                 createdByName = scheme.createdBy;
               }
             }
-            
+
             return {
               id: scheme.schemeCode,
-              distributorName: scheme.distributors && scheme.distributors.length > 0 
-                ? scheme.distributors[0].name || 'Unknown' 
+              distributorName: scheme.distributors && scheme.distributors.length > 0
+                ? scheme.distributors[0].name || 'Unknown'
                 : 'Unknown',
-              distributorCode: scheme.distributors && scheme.distributors.length > 0 
-                ? scheme.distributors[0].code || '' 
+              distributorCode: scheme.distributors && scheme.distributors.length > 0
+                ? scheme.distributors[0].code || ''
                 : '',
-              city: scheme.distributors && scheme.distributors.length > 0 
-                ? scheme.distributors[0].city || '' 
+              city: scheme.distributors && scheme.distributors.length > 0
+                ? scheme.distributors[0].city || ''
                 : '',
               startDate: formatDate(scheme.startDate),
               endDate: formatDate(scheme.endDate),
-              status: scheme.status === 'pending' 
-                ? 'Pending Verification' 
+              status: scheme.status === 'pending'
+                ? 'Pending Verification'
                 : scheme.status.charAt(0).toUpperCase() + scheme.status.slice(1),
               // Add distributor and product counts
               distributorCount: scheme.distributors ? scheme.distributors.length : 0,
@@ -99,9 +109,11 @@ const SchemeList = () => {
               createdBy: createdByName
             };
           });
-          
+
           setSchemes(formattedSchemes);
           setFilteredSchemes(formattedSchemes);
+          console.log('Schemes loaded successfully:', formattedSchemes);
+          console.log('Schemes loaded successfully:', data.data);
         } else {
           message.error(data.error || 'Failed to load schemes');
         }
@@ -182,7 +194,7 @@ const SchemeList = () => {
       dataIndex: 'distributor',
       key: 'distributor',
       render: (_, record) => (
-          <Tag color="blue">{`${record.distributorCount} Distributors`}</Tag>
+        <Tag color="blue">{`${record.distributorCount} Distributors`}</Tag>
       ),
     },
     {
@@ -209,7 +221,7 @@ const SchemeList = () => {
       title: 'Items',
       key: 'items',
       render: (_, record) => (
-          <Tag color="cyan">{`${record.productCount} Products`}</Tag>
+        <Tag color="cyan">{`${record.productCount} Products`}</Tag>
       ),
     },
     {
@@ -245,6 +257,15 @@ const SchemeList = () => {
       ),
     },
   ];
+
+  // Handle pagination change
+  const handlePaginationChange = (page, pageSize) => {
+    setPagination({
+      ...pagination,
+      current: page,
+      pageSize: pageSize,
+    });
+  };
 
   return (
     <div style={{ padding: '16px' }}>
@@ -286,18 +307,23 @@ const SchemeList = () => {
       </Card>
 
       <Card>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>
-            <Spin size="large" />
-          </div>
-        ) : (
           <Table
             columns={columns}
             dataSource={filteredSchemes}
+            loading={loading}
+            pagination={{
+              ...pagination,
+              total: filteredSchemes.length,
+              onChange: handlePaginationChange,
+              onShowSizeChange: handlePaginationChange,
+              showQuickJumper: true,
+              // position: ['bottomCenter']
+            }}
             rowKey="id"
-            pagination={{ pageSize: 10 }}
+            scroll={{ x: 'max-content' }}
+            bordered
+            size="middle"
           />
-        )}
       </Card>
     </div>
   );
