@@ -1,22 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Typography,
-  Button,
-  Card,
-  Table,
-  Tag,
-  Space,
-  Spin,
-  Row,
-  Col,
-  message,
-  Input,
-  DatePicker
-} from 'antd';
+import { Typography, Button, Card, Table, Tag, Space, Spin, Row, Col, message, Input, DatePicker, Modal } from 'antd';
 import {
   PlusOutlined,
-  SearchOutlined
+  SearchOutlined,
+  DownloadOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { AuthContext } from '../context/AuthContext';
 import ExportScheme from '../components/schemes/ExportScheme';
@@ -40,7 +29,7 @@ const SchemeList = () => {
     pageSize: 10,
     total: 0,
     showSizeChanger: true,
-    pageSizeOptions: ['10', '20', '30', '50'],
+    pageSizeOptions: ['10', '20', '30', '50', '100','200'],
     showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`
   });
 
@@ -68,7 +57,7 @@ const SchemeList = () => {
         }
 
         const data = await response.json();
-        // console.log('Schemes data:', data);
+        console.log('Schemes data:', data);
 
         if (data.success) {
           // Transform data to match the expected format
@@ -112,8 +101,6 @@ const SchemeList = () => {
 
           setSchemes(formattedSchemes);
           setFilteredSchemes(formattedSchemes);
-          console.log('Schemes loaded successfully:', formattedSchemes);
-          console.log('Schemes loaded successfully:', data.data);
         } else {
           message.error(data.error || 'Failed to load schemes');
         }
@@ -155,12 +142,16 @@ const SchemeList = () => {
 
     // Apply date filters
     if (dates && dates[0] && dates[1]) {
-      const start = dates[0].startOf('day').toDate();
-      const end = dates[1].endOf('day').toDate();
+      // Convert to UTC dates to match with our formatting
+      const start = dates[0].clone().startOf('day');
+      const end = dates[1].clone().endOf('day');
 
       filtered = filtered.filter(scheme => {
-        const schemeDate = new Date(scheme.startDate.split('-').reverse().join('-'));
-        return schemeDate >= start && schemeDate <= end;
+        // Parse the date in DD-MM-YYYY format correctly
+        const parts = scheme.startDate.split('-');
+        // Create date as YYYY-MM-DD for proper parsing
+        const schemeDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`);
+        return schemeDate >= start.toDate() && schemeDate <= end.toDate();
       });
     }
 
@@ -173,6 +164,17 @@ const SchemeList = () => {
   };
 
   const columns = [
+    {
+      title: 'Sr.',
+      dataIndex: 'sr',
+      key: 'sr',
+      width: 60,
+      render: (_, __, index) => {
+        // Calculate the correct serial number based on pagination
+        return (pagination.current - 1) * pagination.pageSize + index + 1;
+      },
+      fixed: 'left'
+    },
     {
       title: 'Scheme Code',
       dataIndex: 'id',
@@ -253,6 +255,17 @@ const SchemeList = () => {
             <Button type="link" size="small">View</Button>
           </Link>
           <ExportScheme schemeId={record.id} schemeName={record.id} />
+          {hasRole('admin') && (
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={() => showDeleteConfirm(record.id)}
+            >
+              Delete
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -265,6 +278,107 @@ const SchemeList = () => {
       current: page,
       pageSize: pageSize,
     });
+  };
+
+  // Add a new function to handle export by date range
+  const handleExportByDate = async () => {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
+      message.error('Please select a date range first');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
+
+      // Call the export API with the date range
+      const response = await fetch(
+        `${url}/api/schemes/exportByDate?startDate=${startDate}&endDate=${endDate}&format=excel`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to export schemes');
+      }
+
+      // Handle file download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `Schemes_${startDate}_to_${endDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      message.success('Schemes exported successfully');
+    } catch (error) {
+      console.error('Error exporting schemes by date:', error);
+      message.error('Failed to export schemes: ' + error.message);
+    }
+  };
+
+  // Add state for delete confirmation modal
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [schemeToDelete, setSchemeToDelete] = useState(null);
+
+  // Function to show delete confirmation
+  const showDeleteConfirm = (schemeId) => {
+    console.log('Deleting scheme with ID:', schemeId);
+    setSchemeToDelete(schemeId);
+    setDeleteModalVisible(true);
+  };
+
+  // Add function to handle scheme deletion
+  const handleDeleteScheme = async () => {
+    if (!schemeToDelete) return;
+
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const response = await fetch(`${url}/api/schemes/delete/${schemeToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete scheme');
+      }
+
+      // Remove the deleted scheme from state
+      const updatedSchemes = schemes.filter(scheme => scheme.id !== schemeToDelete);
+      setSchemes(updatedSchemes);
+      setFilteredSchemes(filteredSchemes.filter(scheme => scheme.id !== schemeToDelete));
+
+      message.success('Scheme deleted successfully');
+    } catch (error) {
+      console.error('Error deleting scheme:', error);
+      message.error('Failed to delete scheme: ' + error.message);
+    } finally {
+      setLoading(false);
+      setDeleteModalVisible(false);
+      setSchemeToDelete(null);
+    }
   };
 
   return (
@@ -303,28 +417,54 @@ const SchemeList = () => {
               onChange={handleDateRangeChange}
             />
           </Col>
+          <Col xs={24} sm={12} md={8} lg={8}>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleExportByDate}
+              disabled={!dateRange || !dateRange[0] || !dateRange[1]}
+            >
+              Export Schemes by Date
+            </Button>
+          </Col>
         </Row>
       </Card>
 
       <Card>
-          <Table
-            columns={columns}
-            dataSource={filteredSchemes}
-            loading={loading}
-            pagination={{
-              ...pagination,
-              total: filteredSchemes.length,
-              onChange: handlePaginationChange,
-              onShowSizeChange: handlePaginationChange,
-              showQuickJumper: true,
-              // position: ['bottomCenter']
-            }}
-            rowKey="id"
-            scroll={{ x: 'max-content' }}
-            bordered
-            size="middle"
-          />
+        <Table
+          columns={columns}
+          dataSource={filteredSchemes}
+          loading={loading}
+          pagination={{
+            ...pagination,
+            total: filteredSchemes.length,
+            onChange: handlePaginationChange,
+            onShowSizeChange: handlePaginationChange,
+            showQuickJumper: true,
+          }}
+          rowKey="id"
+          scroll={{ x: 'max-content' }}
+          bordered
+          size="middle"
+        />
       </Card>
+
+      {/* Add Delete Confirmation Modal */}
+      <Modal
+        title="Delete Scheme"
+        visible={deleteModalVisible}
+        onOk={handleDeleteScheme}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSchemeToDelete(null);
+        }}
+        okText="Yes, Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <p>Are you sure you want to delete this scheme? This action cannot be undone.</p>
+        {schemeToDelete && <p><strong>Scheme Code:</strong> {schemeToDelete}</p>}
+      </Modal>
     </div>
   );
 };

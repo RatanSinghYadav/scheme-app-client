@@ -10,9 +10,10 @@ export const formatDate = (dateString) => {
       return 'Invalid Date';
     }
     
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+    // Create date parts using UTC methods to avoid timezone issues
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
     
     return `${day}-${month}-${year}`;
   } catch (error) {
