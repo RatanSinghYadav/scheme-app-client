@@ -16,6 +16,7 @@ import AddColumnModal from '../components/schemes/AddColumnModal';
 import SchemeConfirmation from '../components/schemes/SchemeConfirmation';
 import SchemeColumns from '../components/schemes/SchemeColumns';
 import { url } from '../utils/constent.js';
+import SelectedProductsTable from '../components/schemes/SelectedProductsTable';
 
 const { Title } = Typography;
 
@@ -63,6 +64,36 @@ const SchemeCreate = () => {
     const [addColumnModalVisible, setAddColumnModalVisible] = useState(false);
     const [columnForm] = Form.useForm();
 
+    // Add new state for final selected products
+    const [finalSelectedProducts, setFinalSelectedProducts] = useState([]);
+
+    // Add this function to add selected products to final list
+    const handleAddSelectedProducts = () => {
+        if (selectedRowKeys.length === 0) {
+            message.error('Please select at least one product');
+            return;
+        }
+
+        // Get selected products from productItems
+        const productsToAdd = selectedRowKeys.map(key => {
+            const product = productItems.find(item => item.key === key);
+            return { ...product };
+        });
+
+        // Add to final selected products
+        setFinalSelectedProducts([...finalSelectedProducts, ...productsToAdd]);
+
+        // Clear selection
+        setSelectedRowKeys([]);
+
+        message.success(`${productsToAdd.length} products added to selection`);
+    };
+
+    // Add function to remove product from final selection
+    const handleRemoveProduct = (productKey) => {
+        setFinalSelectedProducts(finalSelectedProducts.filter(product => product.key !== productKey));
+    };
+
     // Load distributors and products
     useEffect(() => {
         const fetchDistributors = async () => {
@@ -79,7 +110,7 @@ const SchemeCreate = () => {
                     const distributorsWithKeys = data.data.map((dist, index) => ({
                         ...dist,
                         key: `dist-${index}`,
-                        code: dist.CUSTOMERACCOUNT ||  '',
+                        code: dist.CUSTOMERACCOUNT || '',
                         sm: dist.SMCODE || '',
                         group: dist.CUSTOMERGROUPID || dist.group || '',
                         name: dist.ORGANIZATIONNAME || dist.name || '',
@@ -219,19 +250,19 @@ const SchemeCreate = () => {
     const calculateDiscountByFlavour = (flavour, discountValue) => {
         // Convert discount value to number if it's a string
         const discountAmount = typeof discountValue === 'string' ? parseFloat(discountValue) : discountValue;
-        
+
         // Default denominator
         let denominator = 100;
-        
+
         // Apply discount based on flavour type according to the chart
-        switch(flavour?.toUpperCase()) {
+        switch (flavour?.toUpperCase()) {
             case 'JUICE':
             case 'JUICE RGB':
-            case 'SPARKLE JUICE':
                 denominator = 112;
                 break;
             case 'SPARKLING':
             case 'SPARKLING RGB':
+            case 'SPARKLE JUICE':
                 denominator = 140;
                 break;
             case 'WATER':
@@ -244,7 +275,7 @@ const SchemeCreate = () => {
             default:
                 denominator = 100;
         }
-        
+
         // Calculate discount amount based on the formula (discount × 100 / denominator)
         // This gives us the correct discount value according to the formula
         return parseFloat(((discountAmount * 100) / denominator).toFixed(2));
@@ -275,10 +306,10 @@ const SchemeCreate = () => {
                 } else {
                     // Calculate discount based on flavour using the user-provided discount value
                     const discountValue = calculateDiscountByFlavour(
-                        updatedItems[index].flavour, 
+                        updatedItems[index].flavour,
                         value // Use the user-provided discount value instead of MRP
                     );
-                    
+
                     updatedItems[index] = {
                         ...updatedItems[index],
                         discountPrice: discountValue
@@ -333,8 +364,8 @@ const SchemeCreate = () => {
                 return;
             }
 
-            if (selectedRowKeys.length === 0) {
-                message.error('Please select at least one product');
+            if (finalSelectedProducts.length === 0) {
+                message.error('Please add at least one product to your selection');
                 setLoading(false);
                 return;
             }
@@ -352,8 +383,7 @@ const SchemeCreate = () => {
                 startDate: schemeData.startDate,
                 endDate: schemeData.endDate,
                 distributors: selectedDistributors.map(dist => dist._id || dist.id), // Send distributor IDs
-                products: selectedRowKeys.map(key => {
-                    const product = productItems.find(item => item.key === key);
+                products: finalSelectedProducts.map(product => {
                     return {
                         itemCode: product.itemCode,
                         itemName: product.itemName,
@@ -392,7 +422,12 @@ const SchemeCreate = () => {
             }
 
             message.success('Scheme created successfully!');
-            navigate('/schemes');
+            if (response.ok) {
+                // Give user time to see the success message before reloading
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500); // 1.5 seconds delay
+            }
         } catch (error) {
             console.error('Error submitting scheme:', error);
             message.error(`Failed to create scheme: ${error.message}`);
@@ -635,7 +670,7 @@ const SchemeCreate = () => {
                 form={form}
                 selectedDistributorKeys={selectedDistributorKeys}
                 selectedDistributors={selectedDistributors}
-                selectedRowKeys={selectedRowKeys}
+                selectedProducts={finalSelectedProducts} // Changed from selectedRowKeys
                 productItems={productItems}
                 customColumns={customColumns}
             />
@@ -737,9 +772,21 @@ const SchemeCreate = () => {
                             >
                                 Add Column
                             </Button>
+
+                            {/* Add button to add selected products */}
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={handleAddSelectedProducts}
+                                disabled={selectedRowKeys.length === 0}
+                            >
+                                Add Selected Products
+                            </Button>
                         </Space>
                     </div>
                 </div>
+
+
                 <ProductTable
                     productItems={productItems}
                     setProductItems={setProductItems}
@@ -757,6 +804,20 @@ const SchemeCreate = () => {
                     tableWidth="100%"
                     loading={productsLoading}
                 />
+
+                {/* Show selected products table if there are any */}
+                <Card>
+                    {finalSelectedProducts.length > 0 && (
+                        <SelectedProductsTable
+                            selectedProducts={finalSelectedProducts}
+                            removeProduct={handleRemoveProduct}
+                            customColumns={customColumns.map(col => ({
+                                title: col.title,
+                                key: col.key
+                            }))}
+                        />
+                    )}
+                </Card>
             </Card>
 
             {/* Add Column Modal */}
