@@ -9,7 +9,7 @@ const SchemeConfirmation = ({
     form, 
     selectedDistributorKeys, 
     selectedDistributors, 
-    selectedRowKeys, 
+    selectedProducts, // Changed from selectedRowKeys
     productItems,
     customColumns 
 }) => {
@@ -38,54 +38,51 @@ const SchemeConfirmation = ({
             <Descriptions.Item label="End Date">{form.getFieldValue('endDate')?.format('DD-MM-YYYY')}</Descriptions.Item>
           </Descriptions>
         </Card>
-        
-        <Card title={`Selected Distributors (${selectedDistributorKeys.length})`} style={{ marginBottom: '16px' }}>
+
+        <Card title="Selected Distributors" style={{ marginBottom: '16px' }}>
           <Table
             columns={[
-              { title: 'Sr.', render: (_, __, index) => index + 1, width: 60 },
-              { title: 'Distributor Code', dataIndex: 'CUSTOMERACCOUNT' },
-              { title: 'Distributor Name', dataIndex: 'name' },
-              { title: 'City', dataIndex: 'city' },
-              { title: 'Group', dataIndex: 'group' }
+              { title: 'Sr.', dataIndex: 'sr', key: 'sr', width: 60, render: (_, __, index) => index + 1 },
+              { title: 'Distributor Code', dataIndex: 'code', key: 'code' },
+              { title: 'Distributor Name', dataIndex: 'name', key: 'name' },
+              { title: 'City', dataIndex: 'city', key: 'city' },
+              { title: 'Group', dataIndex: 'group', key: 'group' },
+              { title: 'SM', dataIndex: 'sm', key: 'sm' }
             ]}
             dataSource={selectedDistributors}
+            rowKey="key"
             pagination={false}
             size="small"
-            rowKey="key"
-            scroll={{ y: 250 }}
+            scroll={{ x: 'max-content' }}
           />
         </Card>
-        
-        <Card title={`Selected Products (${selectedRowKeys.length})`}>
+
+        <Card title="Selected Products" style={{ marginTop: '16px' }}>
           <Table
             columns={[
-              { title: 'Sr.', render: (_, __, index) => index + 1, width: 60 },
-              { title: 'Item Code', dataIndex: 'itemCode' },
-              { title: 'Flavour', dataIndex: 'flavour' },
-              { title: 'Brand Name', dataIndex: 'brandName' },
-              { title: 'Item Name', dataIndex: 'itemName' },
-              { title: 'Pack Group', dataIndex: 'packGroup' },
-              { title: 'Style', dataIndex: 'style' },
-              { title: 'Pack Type', dataIndex: 'packType' },
-              { title: 'NOB', dataIndex: 'nob' },
-              { title: 'MRP', dataIndex: 'mrp', render: (text) => `₹${text}` },
-              { title: 'Discount Price', dataIndex: 'discountPrice', render: (text) => text ? `₹${text}` : '-' },
-              // { title: 'Discount %', render: (_, record) => {
-              //   if (!record.discountPrice || record.discountPrice === 0) return '-';
-              //   const discount = ((record.mrp - record.discountPrice) / record.mrp) * 100;
-              //   return `${discount.toFixed(2)}%`;
-              // }},
+              { title: 'Sr.', dataIndex: 'sr', key: 'sr', width: 60, render: (_, __, index) => index + 1 },
+              { title: 'Item Code', dataIndex: 'itemCode', key: 'itemCode' },
+              { title: 'Item Name', dataIndex: 'itemName', key: 'itemName' },
+              { title: 'Brand Name', dataIndex: 'brandName', key: 'brandName' },
+              { title: 'Flavour', dataIndex: 'flavour', key: 'flavour' },
+              { title: 'Pack Type', dataIndex: 'packType', key: 'packType' },
+              { title: 'Pack Group', dataIndex: 'packGroup', key: 'packGroup' },
+              { title: 'Style', dataIndex: 'style', key: 'style' },
+              { title: 'NOB', dataIndex: 'nob', key: 'nob' },
+              { title: 'MRP', dataIndex: 'mrp', key: 'mrp' },
+              { title: 'Discount Price', dataIndex: 'discountPrice', key: 'discountPrice' },
+              // Add custom columns if any
               ...customColumns.map(col => ({
                 title: col.title,
                 dataIndex: col.key,
-                key: col.key
+                key: col.key,
               }))
             ]}
-            dataSource={selectedRowKeys.map(key => productItems.find(item => item.key === key))}
+            dataSource={selectedProducts} // Use selectedProducts directly instead of filtering from productItems
+            rowKey="key"
             pagination={false}
             size="small"
-            rowKey="key"
-            scroll={{ y: 350, x: 'max-content' }}
+            scroll={{ x: 'max-content' }}
           />
         </Card>
       </div>
