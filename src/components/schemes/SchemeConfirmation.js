@@ -34,8 +34,12 @@ const SchemeConfirmation = ({
         <Card title="Scheme Information" style={{ marginBottom: '16px' }}>
           <Descriptions bordered column={2}>
             <Descriptions.Item label="Scheme Code">{schemeData.schemeCode}</Descriptions.Item>
-            <Descriptions.Item label="Start Date">{form.getFieldValue('startDate')?.format('DD-MM-YYYY')}</Descriptions.Item>
-            <Descriptions.Item label="End Date">{form.getFieldValue('endDate')?.format('DD-MM-YYYY')}</Descriptions.Item>
+            <Descriptions.Item label="Start Date">
+              {schemeData.startDate ? schemeData.startDate.format('DD-MM-YYYY') : form.getFieldValue('dateRange')?.[0]?.format('DD-MM-YYYY')}
+            </Descriptions.Item>
+            <Descriptions.Item label="End Date">
+              {schemeData.endDate ? schemeData.endDate.format('DD-MM-YYYY') : form.getFieldValue('dateRange')?.[1]?.format('DD-MM-YYYY')}
+            </Descriptions.Item>
           </Descriptions>
         </Card>
 

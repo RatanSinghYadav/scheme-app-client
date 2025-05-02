@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Button, Card, Form, Input, DatePicker, Space, Row, Col, message, Modal, Select } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined, FilterOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import { AuthContext } from '../context/AuthContext';
 import DistributorTable from '../components/schemes/DistributorTable';
 import ProductTable from '../components/schemes/ProductTable';
@@ -17,6 +16,10 @@ import SchemeConfirmation from '../components/schemes/SchemeConfirmation';
 import SchemeColumns from '../components/schemes/SchemeColumns';
 import { url } from '../utils/constent.js';
 import SelectedProductsTable from '../components/schemes/SelectedProductsTable';
+import FilterPresets from '../components/schemes/FilterPresets';
+
+// Import the ActiveFilters component
+import ActiveFilters from '../components/schemes/ActiveFilters';
 
 const { Title } = Typography;
 
@@ -53,6 +56,7 @@ const SchemeCreate = () => {
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [productFilters, setProductFilters] = useState({});
+    const [currentProductFilters, setCurrentProductFilters] = useState({});
     const [visibleColumns, setVisibleColumns] = useState([
         'itemCode', 'flavour', 'brandName', 'itemName', 'packGroup', 'style', 'packType', 'nob', 'mrp', 'discountPrice'
     ]);
@@ -92,6 +96,29 @@ const SchemeCreate = () => {
     // Add function to remove product from final selection
     const handleRemoveProduct = (productKey) => {
         setFinalSelectedProducts(finalSelectedProducts.filter(product => product.key !== productKey));
+    };
+
+
+    // Handle product filter preset application
+    const handleApplyProductPreset = (presetFilters) => {
+        setProductFilters(presetFilters);
+        setCurrentProductFilters(presetFilters);
+
+        // Apply filters to products
+        let filtered = [...productItems];
+        Object.keys(presetFilters).forEach(key => {
+            const filterValue = presetFilters[key];
+            if (filterValue && filterValue.length > 0) {
+                filtered = filtered.filter(item => {
+                    if (Array.isArray(filterValue)) {
+                        return filterValue.includes(item[key]);
+                    }
+                    return String(item[key]).toLowerCase().includes(String(filterValue).toLowerCase());
+                });
+            }
+        });
+
+        setFilteredProducts(filtered);
     };
 
     // Load distributors and products
@@ -212,6 +239,7 @@ const SchemeCreate = () => {
             [field]: value
         };
         setProductFilters(newFilters);
+        setCurrentProductFilters(newFilters);
 
         // Apply filters
         let filtered = [...productItems];
@@ -659,39 +687,50 @@ const SchemeCreate = () => {
         customColumns
     );
 
+    // Handle removing a single product filter
+    const handleRemoveProductFilter = (field) => {
+        const newFilters = { ...productFilters };
+        delete newFilters[field];
+        setProductFilters(newFilters);
+        setCurrentProductFilters(newFilters);
+
+        // Re-apply remaining filters
+        let filtered = [...productItems];
+        Object.keys(newFilters).forEach(key => {
+            const filterValue = newFilters[key];
+            if (filterValue && filterValue.length > 0) {
+                filtered = filtered.filter(item => {
+                    if (Array.isArray(filterValue)) {
+                        return filterValue.includes(item[key]);
+                    }
+                    return String(item[key]).toLowerCase().includes(String(filterValue).toLowerCase());
+                });
+            }
+        });
+
+        setFilteredProducts(filtered);
+    };
+
+    // Handle clearing all product filters
+    const handleClearProductFilters = () => {
+        setProductFilters({});
+        setCurrentProductFilters({});
+        setFilteredProducts([...productItems]);
+    };
+
     return (
         <div style={{ padding: '16px' }}>
             {/* Add the SchemeConfirmation component */}
-            <SchemeConfirmation
-                visible={showConfirmation}
-                onCancel={handleConfirmationCancel}
-                onConfirm={handleConfirmationSubmit}
-                schemeData={schemeData}
-                form={form}
-                selectedDistributorKeys={selectedDistributorKeys}
-                selectedDistributors={selectedDistributors}
-                selectedProducts={finalSelectedProducts} // Changed from selectedRowKeys
-                productItems={productItems}
-                customColumns={customColumns}
-            />
+            <SchemeConfirmation visible={showConfirmation} onCancel={handleConfirmationCancel} onConfirm={handleConfirmationSubmit} schemeData={schemeData} form={form} selectedDistributorKeys={selectedDistributorKeys} selectedDistributors={selectedDistributors} selectedProducts={finalSelectedProducts} productItems={productItems} customColumns={customColumns} />
 
             <Card style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                     <Title level={4}>Create New Scheme</Title>
                     <Space>
-                        <Button
-                            type="default"
-                            icon={<ArrowLeftOutlined />}
-                            onClick={handleBack}
-                        >
+                        <Button type="default" icon={<ArrowLeftOutlined />} onClick={handleBack}>
                             Back
                         </Button>
-                        <Button
-                            type="primary"
-                            icon={<SaveOutlined />}
-                            onClick={handleConfirmScheme}
-                            loading={loading}
-                        >
+                        <Button type="primary" icon={<SaveOutlined />} onClick={handleConfirmScheme} loading={loading}>
                             Save Scheme
                         </Button>
                     </Space>
@@ -714,20 +753,42 @@ const SchemeCreate = () => {
                         </Col>
                         <Col span={8}>
                             <Form.Item
-                                name="startDate"
-                                label="Start Date"
-                                rules={[{ required: true, message: 'Please select start date' }]}
+                                name="dateRange"
+                                label="Scheme Duration"
+                                rules={[{ required: true, message: 'Please select date range' }]}
                             >
-                                <DatePicker style={{ width: '100%' }} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={8}>
-                            <Form.Item
-                                name="endDate"
-                                label="End Date"
-                                rules={[{ required: true, message: 'Please select end date' }]}
-                            >
-                                <DatePicker style={{ width: '100%' }} />
+                                <DatePicker.RangePicker 
+                                    style={{ width: '100%' }} 
+                                    placeholder={['Start date', 'End date']}
+                                    format="DD-MM-YYYY"
+                                    onChange={(dates) => {
+                                        if (dates) {
+                                            setSchemeData({
+                                                ...schemeData,
+                                                startDate: dates[0],
+                                                endDate: dates[1]
+                                            });
+                                            
+                                            // Set individual fields so they can be used in SchemeConfirmation
+                                            form.setFieldsValue({
+                                                startDate: dates[0],
+                                                endDate: dates[1]
+                                            });
+                                        } else {
+                                            setSchemeData({
+                                                ...schemeData,
+                                                startDate: null,
+                                                endDate: null
+                                            });
+                                            
+                                            // Reset individual fields
+                                            form.setFieldsValue({
+                                                startDate: null,
+                                                endDate: null
+                                            });
+                                        }
+                                    }}
+                                />
                             </Form.Item>
                         </Col>
                     </Row>
@@ -736,50 +797,39 @@ const SchemeCreate = () => {
 
             {/* Distributor Selection */}
             <Card title="Select Distributors" style={{ marginBottom: '16px' }}>
-                <DistributorTable
-                    columns={distributorColumns}
-                    filteredDistributors={filteredDistributors}
-                    selectedDistributorKeys={selectedDistributorKeys}
-                    setSelectedDistributorKeys={setSelectedDistributorKeys}
-                    setSelectedDistributors={setSelectedDistributors}
-                    loading={distributorsLoading}
-                    tableHeight={400}
-                    tableWidth="100%"
-                />
+
+                <DistributorTable columns={distributorColumns} filteredDistributors={filteredDistributors} selectedDistributorKeys={selectedDistributorKeys} setSelectedDistributorKeys={setSelectedDistributorKeys} setSelectedDistributors={setSelectedDistributors} loading={distributorsLoading} tableHeight={400} tableWidth="100%" />
             </Card>
 
             {/* Product Selection */}
             <Card title="Select Products">
                 <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {/* Add FilterPresets component here */}
+                        <FilterPresets
+                            onApplyPreset={handleApplyProductPreset}
+                            currentFilters={currentProductFilters}
+                            productFilters={true}
+                        />
+
+                        {/* Add ActiveFilters component here */}
+                        <ActiveFilters
+                            filters={productFilters}
+                            onRemoveFilter={handleRemoveProductFilter}
+                            onClearFilters={handleClearProductFilters}
+                        />
                     </div>
                     <div>
                         <Space>
-                            <Input
-                                placeholder="Apply Discount"
-                                style={{ width: 150 }}
-                                addonBefore="₹"
-                                onChange={(e) => {
-                                    // Apply discount when value changes (including when cleared)
-                                    handleDiscountPriceAll(e.target.value);
-                                }}
+                            <Input placeholder="Apply Discount" style={{ width: 150 }} addonBefore="₹" onChange={(e) => {
+                                // Apply discount when value changes (including when cleared)
+                                handleDiscountPriceAll(e.target.value);
+                            }}
                                 allowClear
                             />
-                            <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={showAddColumnModal}
-                            >
-                                Add Column
-                            </Button>
 
                             {/* Add button to add selected products */}
-                            <Button
-                                type="primary"
-                                icon={<PlusOutlined />}
-                                onClick={handleAddSelectedProducts}
-                                disabled={selectedRowKeys.length === 0}
-                            >
+                            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddSelectedProducts} disabled={selectedRowKeys.length === 0}>
                                 Add Selected Products
                             </Button>
                         </Space>
@@ -787,23 +837,7 @@ const SchemeCreate = () => {
                 </div>
 
 
-                <ProductTable
-                    productItems={productItems}
-                    setProductItems={setProductItems}
-                    columns={allProductColumns}
-                    visibleColumns={visibleColumns}
-                    setVisibleColumns={setVisibleColumns}
-                    selectedRowKeys={selectedRowKeys}
-                    setSelectedRowKeys={setSelectedRowKeys}
-                    filteredProducts={filteredProducts}
-                    handleDiscountPriceAll={handleDiscountPriceAll}
-                    handleEditColumn={handleEditColumn}
-                    handleDeleteColumn={handleDeleteColumn}
-                    customColumns={customColumns}
-                    tableHeight={400}
-                    tableWidth="100%"
-                    loading={productsLoading}
-                />
+                <ProductTable productItems={productItems} setProductItems={setProductItems} columns={allProductColumns} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} selectedRowKeys={selectedRowKeys} setSelectedRowKeys={setSelectedRowKeys} filteredProducts={filteredProducts} handleDiscountPriceAll={handleDiscountPriceAll} handleEditColumn={handleEditColumn} handleDeleteColumn={handleDeleteColumn} customColumns={customColumns} tableHeight={400} tableWidth="100%" loading={productsLoading} />
 
                 {/* Show selected products table if there are any */}
                 <Card>
@@ -819,56 +853,6 @@ const SchemeCreate = () => {
                     )}
                 </Card>
             </Card>
-
-            {/* Add Column Modal */}
-            <Modal
-                title="Add Custom Column"
-                open={addColumnModalVisible}
-                onOk={handleAddColumn}
-                onCancel={() => {
-                    setAddColumnModalVisible(false);
-                    columnForm.resetFields();
-                }}
-            >
-                <Form form={columnForm} layout="vertical">
-                    <Form.Item
-                        name="title"
-                        label="Column Title"
-                        rules={[{ required: true, message: 'Please enter column title' }]}
-                    >
-                        <Input placeholder="Enter column title" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="key"
-                        label="Column Key"
-                        rules={[{ required: true, message: 'Please enter column key' }]}
-                    >
-                        <Input placeholder="Enter column key (unique identifier)" />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="dataType"
-                        label="Data Type"
-                        rules={[{ required: true, message: 'Please select data type' }]}
-                        initialValue="text"
-                    >
-                        <Select>
-                            <Select.Option value="text">Text</Select.Option>
-                            <Select.Option value="number">Number</Select.Option>
-                            <Select.Option value="date">Date</Select.Option>
-                            <Select.Option value="boolean">Yes/No</Select.Option>
-                        </Select>
-                    </Form.Item>
-
-                    <Form.Item
-                        name="defaultValue"
-                        label="Default Value"
-                    >
-                        <Input placeholder="Default value for this column" />
-                    </Form.Item>
-                </Form>
-            </Modal>
         </div>
     );
 };

@@ -95,3 +95,54 @@ const AddColumnModal = ({
 };
 
 export default AddColumnModal;
+
+
+            {/* Add Column Modal */}
+            // <Modal
+            //     title="Add Custom Column"
+            //     open={addColumnModalVisible}
+            //     onOk={handleAddColumn}
+            //     onCancel={() => {
+            //         setAddColumnModalVisible(false);
+            //         columnForm.resetFields();
+            //     }}
+            // >
+            //     <Form form={columnForm} layout="vertical">
+            //         <Form.Item
+            //             name="title"
+            //             label="Column Title"
+            //             rules={[{ required: true, message: 'Please enter column title' }]}
+            //         >
+            //             <Input placeholder="Enter column title" />
+            //         </Form.Item>
+
+            //         <Form.Item
+            //             name="key"
+            //             label="Column Key"
+            //             rules={[{ required: true, message: 'Please enter column key' }]}
+            //         >
+            //             <Input placeholder="Enter column key (unique identifier)" />
+            //         </Form.Item>
+
+            //         <Form.Item
+            //             name="dataType"
+            //             label="Data Type"
+            //             rules={[{ required: true, message: 'Please select data type' }]}
+            //             initialValue="text"
+            //         >
+            //             <Select>
+            //                 <Select.Option value="text">Text</Select.Option>
+            //                 <Select.Option value="number">Number</Select.Option>
+            //                 <Select.Option value="date">Date</Select.Option>
+            //                 <Select.Option value="boolean">Yes/No</Select.Option>
+            //             </Select>
+            //         </Form.Item>
+
+            //         <Form.Item
+            //             name="defaultValue"
+            //             label="Default Value"
+            //         >
+            //             <Input placeholder="Default value for this column" />
+            //         </Form.Item>
+            //     </Form>
+            // </Modal>

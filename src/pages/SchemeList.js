@@ -12,8 +12,32 @@ import ExportScheme from '../components/schemes/ExportScheme';
 import { formatDate, searchSchemes, filterSchemesByStatus } from '../utils/helpers';
 import { url } from '../utils/constent';
 
+// Import CSS for custom styling
+import '../components/assets/style/SchemeList.css'
+
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
+
+// Add custom styles
+const tableStyles = {
+  tableWrapper: {
+    overflow: 'auto',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+  },
+  tag: {
+    fontSize: '14px',
+    padding: '2px 8px'
+  },
+  distributorTag: {
+    // margin: '2px',
+    display: 'inline-block'
+  },
+  distributorContainer: {
+    maxHeight: '80px',
+    overflowY: 'auto',
+    padding: '4px'
+  }
+};
 
 const SchemeList = () => {
   const { hasRole, currentUser } = useContext(AuthContext);
@@ -29,7 +53,7 @@ const SchemeList = () => {
     pageSize: 10,
     total: 0,
     showSizeChanger: true,
-    pageSizeOptions: ['10', '20', '30', '50', '100','200'],
+    pageSizeOptions: ['10', '20', '30', '50', '100', '200'],
     showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`
   });
 
@@ -95,7 +119,9 @@ const SchemeList = () => {
               createdAt: scheme.createdDate || scheme.createdAt,
               updatedAt: scheme.updatedAt,
               products: scheme.products || [],
-              createdBy: createdByName
+              createdBy: createdByName,
+              // Include the full distributors array
+              distributors: scheme.distributors || []
             };
           });
 
@@ -168,7 +194,6 @@ const SchemeList = () => {
       title: 'Sr.',
       dataIndex: 'sr',
       key: 'sr',
-      width: 60,
       render: (_, __, index) => {
         // Calculate the correct serial number based on pagination
         return (pagination.current - 1) * pagination.pageSize + index + 1;
@@ -179,7 +204,7 @@ const SchemeList = () => {
       title: 'Scheme Code',
       dataIndex: 'id',
       key: 'id',
-      render: (text) => <Link to={`/schemes/${text}`}>{text}</Link>,
+      render: (text) => <Link to={`/schemes/${text}`}><span className="scheme-code">{text}</span></Link>,
     },
     {
       title: 'Start Date',
@@ -191,13 +216,66 @@ const SchemeList = () => {
       dataIndex: 'endDate',
       key: 'endDate',
     },
+    // {
+    //   title: 'Distributor Name',
+    //   dataIndex: 'distributor',
+    //   key: 'distributor',
+    //   width: 200,
+    //   render: (_, record) => {
+    //     // Check if distributors exist and is an array
+    //     if (!record.distributors || !Array.isArray(record.distributors) || record.distributors.length === 0) {
+    //       return <span>No distributors</span>;
+    //     }
+        
+    //     // Return a list of distributor names
+    //     return (
+    //       <div style={tableStyles.distributorContainer}>
+    //         {record.distributors.map((dist, index) => (
+    //           <Tag 
+    //             color="blue" 
+    //             key={index} 
+    //             // style={tableStyles.distributorTag}
+    //           >
+    //             {dist.ORGANIZATIONNAME || `Distributor ${index + 1}`}
+    //           </Tag>
+    //         ))}
+    //       </div>
+    //     );
+    //   },
+    // },
     {
-      title: 'Distributor',
+      title: 'Distributor Count',
       dataIndex: 'distributor',
-      key: 'distributor',
+      key: 'distributorCount',
       render: (_, record) => (
         <Tag color="blue">{`${record.distributorCount} Distributors`}</Tag>
       ),
+    },
+    {
+      title: 'Distributors Code',
+      dataIndex: 'distributor',
+      key: 'distributorList',
+      width: 180,
+      render: (_, record) => {
+        // Check if distributors exist and is an array
+        if (!record.distributors || !Array.isArray(record.distributors)) {
+          return <span>No distributors</span>;
+        }
+        
+        // Return a list of distributor customer accounts
+        return (
+          <div style={tableStyles.distributorContainer}>
+            {record.distributors.map((dist, index) => (
+              <div 
+                key={index} 
+                // className="distributor-account"
+              >
+                {dist.CUSTOMERACCOUNT || `Distributor ${index + 1}`}
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     {
       title: 'Created By',
@@ -383,7 +461,7 @@ const SchemeList = () => {
 
   return (
     <div style={{ padding: '16px' }}>
-      <Card style={{ marginBottom: '16px' }}>
+      {/* <Card style={{ marginBottom: '16px' }}>
         <Row justify="space-between" align="middle">
           <Col>
             <Title level={4} style={{ margin: 0 }}>Schemes</Title>
@@ -398,16 +476,17 @@ const SchemeList = () => {
             )}
           </Col>
         </Row>
-      </Card>
+      </Card> */}
 
       <Card style={{ marginBottom: '16px' }}>
-        <Row gutter={16} align="middle">
-          <Col xs={24} sm={12} md={8} lg={8}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={24} md={8} lg={8}>
             <Input
               placeholder="Search schemes..."
               prefix={<SearchOutlined />}
               onChange={(e) => handleSearch(e.target.value)}
               allowClear
+              className="search-input"
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={8}>
@@ -415,6 +494,7 @@ const SchemeList = () => {
               style={{ width: '100%' }}
               placeholder={['Start date', 'End date']}
               onChange={handleDateRangeChange}
+              className="date-picker"
             />
           </Col>
           <Col xs={24} sm={12} md={8} lg={8}>
@@ -423,6 +503,7 @@ const SchemeList = () => {
               icon={<DownloadOutlined />}
               onClick={handleExportByDate}
               disabled={!dateRange || !dateRange[0] || !dateRange[1]}
+              className="export-button"
             >
               Export Schemes by Date
             </Button>
