@@ -5,6 +5,7 @@ import Login from '../src/components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './pages/Dashboard';
 import SchemeCreate from './pages/SchemeCreate';
+import BaseSchemeCreate from './pages/BaseSchemeCreate';
 import SchemeVerify from './pages/SchemeVerify';
 import SchemeList from './pages/SchemeList';
 import SchemeDetail from './pages/SchemeDetail';
@@ -20,6 +21,8 @@ import Profile from './pages/Profile';
 // यहां हम AuthContext से currentUser और hasRole को प्राप्त करेंगे
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
+import BaseSchemeList from './pages/BaseSchemeList';
+import BaseSchemeDetail from './pages/BaseSchemeDetail';
 
 const theme = {
   token: {
@@ -58,19 +61,40 @@ const AppContent = () => {
         } />
         <Route path="/schemes" element={
           <ProtectedRoute>
-            <SchemeList />
+            <Navigate to="/schemes/additional" replace />
           </ProtectedRoute>
         } />
-        
+
+        <Route path="/schemes/base" element={
+          <ProtectedRoute>
+            <BaseSchemeList schemeType="base" />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/schemes/additional" element={
+          <ProtectedRoute>
+            <SchemeList schemeType="additional" />
+          </ProtectedRoute>
+        } />
+
         {/* केवल creator या admin role वाले users के लिए */}
         {(currentUser && (hasRole('creator') || hasRole('admin'))) && (
-          <Route path="/schemes/create" element={
+          <Route path="/schemes/create/additional" element={
             <ProtectedRoute requiredRole="creator">
               <SchemeCreate />
             </ProtectedRoute>
           } />
         )}
-        
+
+        {/* केवल creator या admin role वाले users के लिए */}
+        {(currentUser && (hasRole('creator') || hasRole('admin'))) && (
+          <Route path="/schemes/create/base" element={
+            <ProtectedRoute requiredRole="creator">
+              <BaseSchemeCreate />
+            </ProtectedRoute>
+          } />
+        )}
+
         {/* केवल verifier या admin role वाले users के लिए */}
         {(currentUser && (hasRole('verifier') || hasRole('admin'))) && (
           <Route path="/schemes/verify" element={
@@ -79,13 +103,19 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
         )}
-        
+
         <Route path="/schemes/:id" element={
           <ProtectedRoute>
             <SchemeDetail />
           </ProtectedRoute>
         } />
-        
+
+        <Route path="/base/schemes/:id" element={
+          <ProtectedRoute>
+            <BaseSchemeDetail />
+          </ProtectedRoute>
+        } />
+
         {/* केवल admin role वाले users के लिए */}
         {(currentUser && hasRole('admin')) && (
           <Route path="/admin" element={
@@ -94,7 +124,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
         )}
-        
+
         <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, Typography, Space, Input, Switch, DatePicker, Button, Popconfirm, Modal, Form, Tooltip, Select } from 'antd';
 import { SettingOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -24,13 +24,93 @@ const ProductTable = ({
   const [editColumnModalVisible, setEditColumnModalVisible] = useState(false);
   const [currentEditColumn, setCurrentEditColumn] = useState(null);
   const [editColumnForm] = Form.useForm();
+  
+  // Add pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0,
+    showSizeChanger: true,
+    pageSizeOptions: ['50', '100', '200'],
+    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`
+  });
+
+  // Memoized columns and data
+  const memoizedColumns = useMemo(() => {
+    // Check if this is a custom column
+    return columns.map(col => {
+      const isCustomColumn = Array.isArray(customColumns) && customColumns.some(customCol => customCol.key === col.key);
+
+      if (isCustomColumn) {
+        return {
+          ...col,
+          title: () => (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>{col.title}</span>
+              <Space size="small">
+                <Tooltip title="Edit column">
+                  <Button
+                    icon={<EditOutlined />}
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showEditColumnModal(col);
+                    }}
+                  />
+                </Tooltip>
+                <Tooltip title="Delete column">
+                  <Popconfirm
+                    title="Are you sure you want to delete this column?"
+                    onConfirm={() => handleDeleteColumn(col.key)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Popconfirm>
+                </Tooltip>
+              </Space>
+            </div>
+          ),
+          render: (text, record, index) => {
+            return renderCell(col.dataType, text, record, index, col.key);
+          }
+        };
+      }
+
+      return col;
+    });
+  }, [columns, customColumns]);
+
+  // Memoized visible columns
+  const visibleProductColumns = useMemo(() => 
+    memoizedColumns.filter(col => visibleColumns.includes(col.key) || col.key === 'sr'),
+    [memoizedColumns, visibleColumns]
+  );
 
   // Product row selection
   const productRowSelection = {
     selectedRowKeys,
     onChange: (keys) => {
       setSelectedRowKeys(keys);
-    }
+    },
+    // Optimized for performance
+    getCheckboxProps: record => ({
+      name: record.key,
+    }),
+  };
+
+  // Handle pagination change
+  const handlePaginationChange = (page, pageSize) => {
+    setPagination({
+      ...pagination,
+      current: page,
+      pageSize: pageSize,
+    });
   };
 
   // Handle cell value change for custom columns
@@ -122,60 +202,6 @@ const ProductTable = ({
     });
   };
 
-  // Add column actions to custom columns
-  const columnsWithActions = columns.map(col => {
-    // Check if this is a custom column
-    const isCustomColumn = Array.isArray(customColumns) && customColumns.some(customCol => customCol.key === col.key);
-
-    if (isCustomColumn) {
-      return {
-        ...col,
-        title: () => (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>{col.title}</span>
-            <Space size="small">
-              <Tooltip title="Edit column">
-                <Button
-                  icon={<EditOutlined />}
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    showEditColumnModal(col);
-                  }}
-                />
-              </Tooltip>
-              <Tooltip title="Delete column">
-                <Popconfirm
-                  title="Are you sure you want to delete this column?"
-                  onConfirm={() => handleDeleteColumn(col.key)}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    danger
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </Popconfirm>
-              </Tooltip>
-            </Space>
-          </div>
-        ),
-        render: (text, record, index) => {
-          return renderCell(col.dataType, text, record, index, col.key);
-        }
-      };
-    }
-
-    return col;
-  });
-
-  // Define visible columns based on the visibleColumns prop
-  const visibleProductColumns = columnsWithActions.filter(col =>
-    visibleColumns.includes(col.key) || col.key === 'sr'
-  );
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -197,11 +223,20 @@ const ProductTable = ({
       <Table
         rowSelection={{
           type: 'checkbox',
-          ...productRowSelection
+          ...productRowSelection,
+          // Optimized for performance
+          columnWidth: 40,
+          fixed: true
         }}
         columns={visibleProductColumns}
         dataSource={filteredProducts}
-        pagination={false}
+        pagination={{ 
+          ...pagination,
+          total: filteredProducts.length,
+          onChange: handlePaginationChange,
+          onShowSizeChange: handlePaginationChange,
+          showQuickJumper: true,
+        }}
         size="small"
         bordered
         loading={loading}
@@ -211,8 +246,10 @@ const ProductTable = ({
         }}
         style={{
           maxHeight: tableHeight,
-          width: tableWidth
+          width: tableWidth,
         }}
+        // Optimized for performance
+        virtual={filteredProducts.length > 200}
       />
 
       {/* Edit Column Modal */}
