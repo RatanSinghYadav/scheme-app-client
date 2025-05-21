@@ -19,7 +19,9 @@ import {
   BellOutlined,
   DashboardOutlined,
   FileDoneOutlined,
-  PlusOutlined,
+  FileAddOutlined,
+  UsergroupAddOutlined,
+  UserAddOutlined,
   CheckOutlined,
   ToolOutlined,
   MenuFoldOutlined,
@@ -72,8 +74,10 @@ const Navbar = ({ children }) => {
   const getSelectedKeys = () => {
     const path = location.pathname;
     if (path === '/') return ['dashboard'];
-    if (path === '/schemes') return ['schemes'];
-    if (path === '/schemes/create') return ['create'];
+    if (path === '/schemes/base') return ['base-schemes'];
+    if (path === '/schemes/additional') return ['additional-schemes'];
+    if (path.includes('/schemes/create/base')) return ['create-base'];
+    if (path.includes('/schemes/create/additional')) return ['create-additional'];
     if (path === '/schemes/verify') return ['verify'];
     if (path === '/admin') return ['admin'];
     return [];
@@ -86,17 +90,30 @@ const Navbar = ({ children }) => {
       label: <Link to="/">Dashboard</Link>
     },
     {
-      key: 'schemes',
+      key: 'base-schemes',
       icon: <FileDoneOutlined />,
-      label: <Link to="/schemes">Schemes</Link>
+      label: <Link to="/schemes/base">Base Schemes</Link>
+    },
+    {
+      key: 'additional-schemes',
+      icon: <FileAddOutlined />,
+      label: <Link to="/schemes/additional">Additional Schemes</Link>
     }
   ];
 
   if (hasRole && hasRole('creator')) {
     sideNavItems.push({
-      key: 'create',
-      icon: <PlusOutlined />,
-      label: <Link to="/schemes/create">Create Scheme</Link>
+      key: 'create-additional',
+      icon: <UserAddOutlined />,
+      label: <Link to="/schemes/create/additional">Create Add. Scheme</Link>
+    });
+  }
+
+  if (hasRole && hasRole('creator')) {
+    sideNavItems.push({
+      key: 'create-base',
+      icon: <UsergroupAddOutlined />,
+      label: <Link to="/schemes/create/base">Create Base Scheme</Link>
     });
   }
 

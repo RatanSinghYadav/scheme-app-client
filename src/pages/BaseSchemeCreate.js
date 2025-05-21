@@ -1,31 +1,28 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Button, Card, Form, Input, DatePicker, Space, Row, Col, message, Modal, Select } from 'antd';
-import { SaveOutlined, ArrowLeftOutlined, FilterOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
-import { AuthContext } from '../context/AuthContext';
+import { Typography, Button, Card, Form, Input, DatePicker, Space, Row, Col, message } from 'antd';
+import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, FilterOutlined } from '@ant-design/icons';
 import DistributorTable from '../components/schemes/DistributorTable';
+// Import the new component at the top with other imports
+import BaseSchemeConfirmation from '../components/schemes/BaseSchemeConfirmation';
 import ProductTable from '../components/schemes/ProductTable';
 import TableFilters from '../components/schemes/TableFilters';
 import CheckboxFilter from '../components/schemes/CheckboxFilter';
-
-// Import the AddColumnModal component
-import AddColumnModal from '../components/schemes/AddColumnModal';
-
-// Import the new component at the top with other imports
-import SchemeConfirmation from '../components/schemes/SchemeConfirmation';
 import SchemeColumns from '../components/schemes/SchemeColumns';
-import { url } from '../utils/constent.js';
 import SelectedProductsTable from '../components/schemes/SelectedProductsTable';
 import FilterPresets from '../components/schemes/FilterPresets';
-
 // Import the ActiveFilters component
 import ActiveFilters from '../components/schemes/ActiveFilters';
 
-const { Title } = Typography;
+import BaseSchemeTableColumns from '../components/schemes/BaseSchemeTableColumns';
 
-const SchemeCreate = () => {
+import { url } from '../utils/constent';
+
+const { Title } = Typography;
+const { RangePicker } = DatePicker;
+
+const BaseSchemeCreate = () => {
     const navigate = useNavigate();
-    const { currentUser } = useContext(AuthContext);
     const [form] = Form.useForm();
 
     // Scheme data state
@@ -35,14 +32,12 @@ const SchemeCreate = () => {
         endDate: null
     });
 
-    // Add this state variable with other state variables
-    const [showConfirmation, setShowConfirmation] = useState(false);
-
-
+    const [loading, setLoading] = useState(false);
     const [distributorsLoading, setDistributorsLoading] = useState(true);
     const [productsLoading, setProductsLoading] = useState(true);
 
-    const [loading, setLoading] = useState(false);
+    // Add this state variable with other state variables
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
     // Distributors state
     const [distributors, setDistributors] = useState([]);
@@ -51,57 +46,30 @@ const SchemeCreate = () => {
     const [selectedDistributors, setSelectedDistributors] = useState([]);
     const [distributorFilters, setDistributorFilters] = useState({});
 
+    // Groups state
+    const [groups, setGroups] = useState([]);
+    const [filteredGroups, setFilteredGroups] = useState([]);
+    const [selectedGroupKeys, setSelectedGroupKeys] = useState([]);
+    const [selectedGroups, setSelectedGroups] = useState([]);
+    const [groupFilters, setGroupFilters] = useState({});
+
     // Products state
     const [productItems, setProductItems] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
+    const [currentProductFilters, setCurrentProductFilters] = useState({});
     const [selectedRowKeys, setSelectedRowKeys] = useState([]);
     const [productFilters, setProductFilters] = useState({});
-    const [currentProductFilters, setCurrentProductFilters] = useState({});
     const [visibleColumns, setVisibleColumns] = useState([
         'itemCode', 'flavour', 'brandName', 'itemName', 'packGroup', 'style', 'packType', 'nob', 'mrp', 'discountPrice'
     ]);
 
-    // Custom columns state
-    const [customColumns, setCustomColumns] = useState([]);
-
-    // Add Column Modal state
-    const [addColumnModalVisible, setAddColumnModalVisible] = useState(false);
-    const [columnForm] = Form.useForm();
-
-    // Add new state for final selected products
+    // Final selected products
     const [finalSelectedProducts, setFinalSelectedProducts] = useState([]);
 
-    // Add this function to add selected products to final list
-    const handleAddSelectedProducts = () => {
-        if (selectedRowKeys.length === 0) {
-            message.error('Please select at least one product');
-            return;
-        }
+    // Custom columns for product table
+    const [customColumns, setCustomColumns] = useState([]);
 
-        // Get selected products from productItems
-        const productsToAdd = selectedRowKeys.map(key => {
-            const product = productItems.find(item => item.key === key);
-            return { ...product };
-        });
-
-        // Add to final selected products
-        setFinalSelectedProducts([...finalSelectedProducts, ...productsToAdd]);
-
-        // Clear selection
-        setSelectedRowKeys([]);
-
-        message.success(`${productsToAdd.length} products added to selection`);
-    };
-
-    // Add function to remove product from final selection
-    const handleRemoveProduct = (productKey) => {
-        setFinalSelectedProducts(finalSelectedProducts.filter(product => product.key !== productKey));
-    };
-
-
-
-
-    // Load distributors and products
+    // Load distributors, groups and products
     useEffect(() => {
         const fetchDistributors = async () => {
             setDistributorsLoading(true);
@@ -125,6 +93,26 @@ const SchemeCreate = () => {
                     }));
                     setDistributors(distributorsWithKeys);
                     setFilteredDistributors(distributorsWithKeys);
+
+                    // Extract unique groups
+                    const uniqueGroups = [...new Set(distributorsWithKeys.map(dist => dist.group))].filter(group => group && group.trim() !== '');
+                    const groupsWithKeys = uniqueGroups.map((group, index) => {
+                        // Find all cities for this group
+                        const citiesForGroup = [...new Set(
+                            distributorsWithKeys
+                                .filter(d => d.group === group)
+                                .map(d => d.city)
+                                .filter(Boolean) // Remove empty cities
+                        )];
+
+                        return {
+                            key: `group-${index}`,
+                            group: group,
+                            city: citiesForGroup.join(', '), // Join all cities with comma
+                        };
+                    });
+                    setGroups(groupsWithKeys);
+                    setFilteredGroups(groupsWithKeys);
                 } else {
                     message.error('Failed to load distributors');
                 }
@@ -135,7 +123,6 @@ const SchemeCreate = () => {
                 setDistributorsLoading(false);
             }
         };
-
 
         const fetchProducts = async () => {
             setProductsLoading(true);
@@ -179,15 +166,40 @@ const SchemeCreate = () => {
         fetchProducts();
     }, []);
 
-    // Handle product filter preset application
-    const handleApplyProductPreset = (presetFilters) => {
-        setProductFilters(presetFilters);
-        setCurrentProductFilters(presetFilters);
+    // Handle scheme code change
+    const handleSchemeCodeChange = (e) => {
+        setSchemeData({
+            ...schemeData,
+            schemeCode: e.target.value
+        });
+    };
 
-        // Apply filters to products
-        let filtered = [...productItems];
-        Object.keys(presetFilters).forEach(key => {
-            const filterValue = presetFilters[key];
+    // Handle date range change
+    const handleDateRangeChange = (dates) => {
+        if (dates) {
+            setSchemeData({
+                ...schemeData,
+                startDate: dates[0],
+                endDate: dates[1]
+            });
+        } else {
+            setSchemeData({
+                ...schemeData,
+                startDate: null,
+                endDate: null
+            });
+        }
+    };
+
+    // Handle group filter
+    const handleGroupFilter = (field, value) => {
+        const newFilters = { ...groupFilters, [field]: value };
+        setGroupFilters(newFilters);
+
+        // Apply filters to groups
+        let filtered = [...groups];
+        Object.keys(newFilters).forEach(key => {
+            const filterValue = newFilters[key];
             if (filterValue && filterValue.length > 0) {
                 filtered = filtered.filter(item => {
                     if (Array.isArray(filterValue)) {
@@ -198,26 +210,15 @@ const SchemeCreate = () => {
             }
         });
 
-        setFilteredProducts(filtered);
+        setFilteredGroups(filtered);
     };
 
-    // Handle form field changes
-    const handleFormChange = (changedValues) => {
-        setSchemeData({
-            ...schemeData,
-            ...changedValues
-        });
-    };
-
-    // Handle distributor filter change
-    const handleDistributorFilterChange = (field, value) => {
-        const newFilters = {
-            ...distributorFilters,
-            [field]: value
-        };
+    // Handle distributor filter
+    const handleDistributorFilter = (field, value) => {
+        const newFilters = { ...distributorFilters, [field]: value };
         setDistributorFilters(newFilters);
 
-        // Apply filters
+        // Apply filters to distributors
         let filtered = [...distributors];
         Object.keys(newFilters).forEach(key => {
             const filterValue = newFilters[key];
@@ -232,6 +233,199 @@ const SchemeCreate = () => {
         });
 
         setFilteredDistributors(filtered);
+    };
+
+    // Handle product filter
+    const handleProductFilter = (field, value) => {
+        const newFilters = { ...productFilters, [field]: value };
+        setProductFilters(newFilters);
+
+        // Apply filters to products
+        let filtered = [...productItems];
+        Object.keys(newFilters).forEach(key => {
+            const filterValue = newFilters[key];
+            if (filterValue && filterValue.length > 0) {
+                filtered = filtered.filter(item => {
+                    if (Array.isArray(filterValue)) {
+                        return filterValue.includes(item[key]);
+                    }
+                    return String(item[key]).toLowerCase().includes(String(filterValue).toLowerCase());
+                });
+            }
+        });
+
+        setFilteredProducts(filtered);
+    };
+
+    // Handle add selected products
+    const handleAddSelectedProducts = () => {
+        if (selectedRowKeys.length === 0) {
+            message.error('Please select at least one product');
+            return;
+        }
+
+        // Get selected products from productItems
+        const productsToAdd = selectedRowKeys.map(key => {
+            const product = productItems.find(item => item.key === key);
+            return { ...product };
+        });
+
+        // Add to final selected products
+        setFinalSelectedProducts([...finalSelectedProducts, ...productsToAdd]);
+
+        // Clear selection
+        setSelectedRowKeys([]);
+
+        message.success(`${productsToAdd.length} products added to selection`);
+    };
+
+    // Handle remove product from final selection
+    const handleRemoveProduct = (productKey) => {
+        setFinalSelectedProducts(finalSelectedProducts.filter(product => product.key !== productKey));
+    };
+
+    // Get unique values for a field
+    const getUniqueFieldOptions = (field) => {
+        if (field === 'group') {
+            const values = [...new Set(groups.map(item => item[field]))];
+            return values.filter(Boolean).map(value => ({
+                label: String(value),
+                value: value
+            }));
+        } else if (field === 'city') {
+            const values = [...new Set(groups.map(item => item[field]))];
+            return values.filter(Boolean).map(value => ({
+                label: String(value),
+                value: value
+            }));
+        } else {
+            const values = [...new Set(productItems.map(item => item[field]))];
+            return values.filter(Boolean).map(value => ({
+                label: String(value),
+                value: value
+            }));
+        }
+    };
+
+    // Get flavour options for filter
+    const getFlavourOptions = () => {
+        const flavours = [...new Set(productItems.map(item => item.flavour))];
+        return flavours.filter(Boolean).map(flavour => ({
+            label: flavour,
+            value: flavour
+        }));
+    };
+
+    // Handle save scheme
+    const handleSaveScheme = async () => {
+        if (!schemeData.schemeCode) {
+            message.error('Please enter scheme code');
+            return;
+        }
+
+        if (!schemeData.startDate || !schemeData.endDate) {
+            message.error('Please select scheme duration');
+            return;
+        }
+
+        if (selectedGroupKeys.length === 0 && selectedDistributorKeys.length === 0) {
+            message.error('Please select at least one distributor group or distributor');
+            return;
+        }
+
+        if (finalSelectedProducts.length === 0) {
+            message.error('Please select at least one product');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                throw new Error('Authentication token not found');
+            }
+
+            // Prepare the scheme data for submission
+            const schemePayload = {
+                schemeCode: schemeData.schemeCode,
+                startDate: schemeData.startDate,
+                endDate: schemeData.endDate,
+                distributorType: selectedGroupKeys.length > 0 ? 'group' : 'individual',
+                distributors: selectedGroupKeys.length > 0
+                    ? selectedGroups.map(group => (group.group))
+                    : selectedDistributors.map(dist => dist._id || dist.id), // Send distributor IDs
+                products: finalSelectedProducts.map(product => {
+                    return {
+                        itemCode: product.itemCode,
+                        itemName: product.itemName,
+                        brandName: product.brandName,
+                        flavour: product.flavour,
+                        packType: product.packType,
+                        packGroup: product.packGroup,
+                        Style: product.style,
+                        NOB: product.nob,
+                        Configuration: product.mrp,
+                        discountPrice: product.discountPrice,
+                        customFields: product.customFields || {}
+                    };
+                })
+            };
+
+            console.log('Scheme payload:', schemePayload);
+            console.log('Selected distributors:', selectedDistributors);
+            console.log('selected groupus:', selectedGroups);
+
+            const response = await fetch(`${url}/api/base/schemes/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(schemePayload)
+            });
+
+            const data = await response.json();
+
+            console.log('Scheme creation response:', data);
+
+            if (data.success) {
+                message.success('Base scheme created successfully');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to create scheme');
+            }
+        } catch (error) {
+            console.error('Error creating scheme:', error);
+            message.error('Failed to create scheme: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+    // Add this function to handle confirmation modal
+    const handleConfirmScheme = () => {
+        setShowConfirmation(true);
+    };
+
+    // Add this function to handle confirmation cancel
+    const handleConfirmationCancel = () => {
+        setShowConfirmation(false);
+    };
+
+    // Add this function to handle confirmation submit
+    const handleConfirmationSubmit = () => {
+        setShowConfirmation(false);
+        handleSaveScheme();
+    };
+
+    // Handle back button
+    const handleBack = () => {
+        navigate('/schemes');
     };
 
     // Handle product filter change
@@ -364,148 +558,41 @@ const SchemeCreate = () => {
         }
     };
 
-    // Get unique values for a field
-    const getUniqueFieldOptions = (field) => {
-        const values = [...new Set(productItems.map(item => item[field]))];
-        return values.filter(Boolean).map(value => ({
-            label: String(value),
-            value: value
-        }));
+    // Handle form field changes
+    const handleFormChange = (changedValues) => {
+        setSchemeData({
+            ...schemeData,
+            ...changedValues
+        });
     };
 
-    // Get flavour options for filter
-    const getFlavourOptions = () => {
-        const flavours = [...new Set(productItems.map(item => item.flavour))];
-        return flavours.filter(Boolean).map(flavour => ({
-            label: flavour,
-            value: flavour
-        }));
-    };
+    // Handle product filter preset application
+    const handleApplyProductPreset = (presetFilters) => {
+        setProductFilters(presetFilters);
+        setCurrentProductFilters(presetFilters);
 
-    // Add this function to handle scheme submission
-    const handleSubmitScheme = async () => {
-        try {
-            setLoading(true);
-
-            // Validate if distributors and products are selected
-            if (selectedDistributorKeys.length === 0) {
-                message.error('Please select at least one distributor');
-                setLoading(false);
-                return;
+        // Apply filters to products
+        let filtered = [...productItems];
+        Object.keys(presetFilters).forEach(key => {
+            const filterValue = presetFilters[key];
+            if (filterValue && filterValue.length > 0) {
+                filtered = filtered.filter(item => {
+                    if (Array.isArray(filterValue)) {
+                        return filterValue.includes(item[key]);
+                    }
+                    return String(item[key]).toLowerCase().includes(String(filterValue).toLowerCase());
+                });
             }
+        });
 
-            if (finalSelectedProducts.length === 0) {
-                message.error('Please add at least one product to your selection');
-                setLoading(false);
-                return;
-            }
-
-            // Validate scheme data
-            if (!schemeData.startDate || !schemeData.endDate) {
-                message.error('Please select start and end dates');
-                setLoading(false);
-                return;
-            }
-
-            // Prepare the scheme data for submission
-            const schemePayload = {
-                schemeCode: schemeData.schemeCode,
-                startDate: schemeData.startDate,
-                endDate: schemeData.endDate,
-                distributors: selectedDistributors.map(dist => dist._id || dist.id), // Send distributor IDs
-                products: finalSelectedProducts.map(product => {
-                    return {
-                        itemCode: product.itemCode,
-                        itemName: product.itemName,
-                        brandName: product.brandName,
-                        flavour: product.flavour,
-                        packType: product.packType,
-                        packGroup: product.packGroup,
-                        Style: product.style,
-                        NOB: product.nob,
-                        Configuration: product.mrp,
-                        discountPrice: product.discountPrice,
-                        customFields: product.customFields || {}
-                    };
-                })
-            };
-
-            console.log('Scheme payload:', schemePayload);
-
-            // Replace mock API call with actual server API call
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${url}/api/schemes/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(schemePayload)
-            });
-
-            const data = await response.json();
-
-            console.log('Server response:', data); // Add this line for debugging the server response
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to create scheme');
-            }
-
-            message.success('Scheme created successfully!');
-            if (response.ok) {
-                // Give user time to see the success message before reloading
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500); // 1.5 seconds delay
-            }
-        } catch (error) {
-            console.error('Error submitting scheme:', error);
-            message.error(`Failed to create scheme: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
+        setFilteredProducts(filtered);
     };
 
-    // Add this function to handle confirmation modal
-    const handleConfirmScheme = () => {
-        setShowConfirmation(true);
-    };
+    // Define columns for groups table
+    const groupColumns = BaseSchemeTableColumns.getGroupColumns(groups, handleGroupFilter, getUniqueFieldOptions);
 
-    // Add this function to handle confirmation cancel
-    const handleConfirmationCancel = () => {
-        setShowConfirmation(false);
-    };
-
-    // Add this function to handle confirmation submit
-    const handleConfirmationSubmit = () => {
-        setShowConfirmation(false);
-        handleSubmitScheme();
-    };
-
-    // Handle back button
-    const handleBack = () => {
-        navigate('/schemes');
-    };
-
-
-    // Helper function to get default value based on data type
-    const getDefaultValueByType = (dataType, defaultValue) => {
-        switch (dataType) {
-            case 'number':
-                return defaultValue ? parseFloat(defaultValue) : 0;
-            case 'boolean':
-                return defaultValue === 'true';
-            case 'date':
-                return defaultValue || null;
-            default:
-                return defaultValue || '';
-        }
-    };
-
-    const distributorColumns = SchemeColumns.getDistributorColumns(
-        distributors,
-        handleDistributorFilterChange
-    );
+    // Define distributor columns
+    const distributorColumns = BaseSchemeTableColumns.getDistributorColumns(distributors, handleDistributorFilter);
 
     // Define all possible product columns using the SchemeColumns component
     const allProductColumns = SchemeColumns.getProductColumns(
@@ -551,13 +638,14 @@ const SchemeCreate = () => {
     };
 
     return (
-        <div style={{marginBottom:'36px', padding: '16px' }}>
-            {/* Add the SchemeConfirmation component */}
-            <SchemeConfirmation visible={showConfirmation} onCancel={handleConfirmationCancel} onConfirm={handleConfirmationSubmit} schemeData={schemeData} form={form} selectedDistributorKeys={selectedDistributorKeys} selectedDistributors={selectedDistributors} selectedProducts={finalSelectedProducts} productItems={productItems} customColumns={customColumns} />
+        <div style={{ padding: '16px', marginBottom: '46px' }}>
+
+            {/* Add the BaseSchemeConfirmation component */}
+            <BaseSchemeConfirmation visible={showConfirmation} onCancel={handleConfirmationCancel} onConfirm={handleConfirmationSubmit} schemeData={schemeData} form={form} selectedDistributorKeys={selectedDistributorKeys} selectedDistributors={selectedDistributors} selectedProducts={finalSelectedProducts} productItems={productItems} selectedGroups={selectedGroups} customColumns={customColumns} />
 
             <Card style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                    <Title level={4}>Create Additional Scheme</Title>
+                    <Title level={4}>Create Base Scheme</Title>
                     <Space>
                         <Button type="default" icon={<ArrowLeftOutlined />} onClick={handleBack}>
                             Back
@@ -601,7 +689,7 @@ const SchemeCreate = () => {
                                                 endDate: dates[1]
                                             });
 
-                                            // Set individual fields so they can be used in SchemeConfirmation
+                                            // Set individual fields so they can be used in BaseSchemeConfirmation
                                             form.setFieldsValue({
                                                 startDate: dates[0],
                                                 endDate: dates[1]
@@ -627,19 +715,34 @@ const SchemeCreate = () => {
                 </Form>
             </Card>
 
-            {/* Distributor Selection */}
-            <Card title="Select Distributors" style={{ marginBottom: '46px' }}>
-
-                <DistributorTable
-                    columns={distributorColumns}
-                    filteredDistributors={filteredDistributors}
-                    selectedDistributorKeys={selectedDistributorKeys}
-                    setSelectedDistributorKeys={setSelectedDistributorKeys}
-                    setSelectedDistributors={setSelectedDistributors}
-                    loading={distributorsLoading}
-                    tableHeight={400}
-                    tableWidth="100%" />
-            </Card>
+            <Row gutter={[16, 16]}>
+                <Col xs={24} md={8}>
+                    <Card title="Select Groups" style={{ marginBottom: '46px' }}>
+                        <DistributorTable
+                            columns={groupColumns}
+                            filteredDistributors={filteredGroups}
+                            selectedDistributorKeys={selectedGroupKeys}
+                            setSelectedDistributorKeys={setSelectedGroupKeys}
+                            setSelectedDistributors={setSelectedGroups}
+                            tableHeight={300}
+                            loading={distributorsLoading}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} md={16}>
+                    <Card title="Select Distributors" style={{ marginBottom: '16px' }}>
+                        <DistributorTable
+                            columns={distributorColumns}
+                            filteredDistributors={filteredDistributors}
+                            selectedDistributorKeys={selectedDistributorKeys}
+                            setSelectedDistributorKeys={setSelectedDistributorKeys}
+                            setSelectedDistributors={setSelectedDistributors}
+                            tableHeight={300}
+                            loading={distributorsLoading}
+                        />
+                    </Card>
+                </Col>
+            </Row>
 
             {/* Product Selection */}
             <Card title="Select Products">
@@ -677,38 +780,21 @@ const SchemeCreate = () => {
                 </div>
 
 
-                <ProductTable
-                    productItems={productItems}
-                    setProductItems={setProductItems}
-                    columns={allProductColumns}
-                    visibleColumns={visibleColumns}
-                    setVisibleColumns={setVisibleColumns}
-                    selectedRowKeys={selectedRowKeys}
-                    setSelectedRowKeys={setSelectedRowKeys}
-                    filteredProducts={filteredProducts}
-                    handleDiscountPriceAll={handleDiscountPriceAll}
-                    customColumns={customColumns}
-                    tableHeight={400}
-                    tableWidth="100%"
-                    loading={productsLoading}
-                />
-            </Card>
+                <ProductTable productItems={productItems} setProductItems={setProductItems} columns={allProductColumns} visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} selectedRowKeys={selectedRowKeys} setSelectedRowKeys={setSelectedRowKeys} filteredProducts={filteredProducts} handleDiscountPriceAll={handleDiscountPriceAll} customColumns={customColumns} tableHeight={400} tableWidth="100%" loading={productsLoading} />
 
-            {/* Show selected products table if there are any */}
-            {finalSelectedProducts.length > 0 && (
-                <Card style={{ marginTop: "46px" }}>
-                    <SelectedProductsTable
-                        selectedProducts={finalSelectedProducts}
-                        removeProduct={handleRemoveProduct}
-                        customColumns={customColumns.map(col => ({
-                            title: col.title,
-                            key: col.key
-                        }))}
-                    />
-                </Card>
-            )}
+                {/* Show selected products table if there are any */}
+                {finalSelectedProducts.length > 0 && (
+                    <Card title="Selected Products" style={{ marginBottom: '20px' }}>
+                        <SelectedProductsTable
+                            selectedProducts={finalSelectedProducts}
+                            removeProduct={handleRemoveProduct}
+                            customColumns={customColumns}
+                        />
+                    </Card>
+                )}
+            </Card>
         </div>
     );
 };
 
-export default SchemeCreate;
+export default BaseSchemeCreate;

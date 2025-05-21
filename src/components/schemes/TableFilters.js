@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Input, 
   Button, 
@@ -7,7 +7,8 @@ import {
   Menu,
   Dropdown,
   Divider,
-  Typography
+  Typography,
+  Spin
 } from 'antd';
 import { 
   SearchOutlined,
@@ -28,29 +29,76 @@ const TableFilters = ({
   useCheckboxFilter = false,
   dataSource = []
 }) => {
-  // Get unique values for the field from dataSource
-  const getUniqueValues = () => {
+  // Get unique values for the field from dataSource - using useMemo for optimization
+  const getUniqueValues = useMemo(() => {
     if (filterOptions) return filterOptions;
     
-    const values = dataSource
-      .map(item => item[field])
-      .filter((value, index, self) => 
-        value !== undefined && 
-        value !== null && 
-        self.indexOf(value) === index
-      );
+    // Limit to first 1000 items for performance
+    const limitedDataSource = dataSource.slice(0, 1000);
     
-    return values.map(value => ({
+    const valueMap = new Map();
+    limitedDataSource.forEach(item => {
+      const value = item[field];
+      if (value !== undefined && value !== null) {
+        valueMap.set(value, true);
+      }
+    });
+    
+    return Array.from(valueMap.keys()).map(value => ({
       label: String(value),
       value: value
     }));
-  };
+  }, [dataSource, field, filterOptions]);
 
   // Create the filter dropdown menu
   const createFilterDropdown = ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
     if (useCheckboxFilter) {
       // Checkbox filter for multiple selection
-      const options = getUniqueValues();
+      const options = getUniqueValues;
+      
+      // Show loading indicator if there are too many options
+      if (dataSource.length > 5000) {
+        return (
+          <div style={{ padding: 8 }}>
+            <Input
+              placeholder={`Search ${placeholder || field}`}
+              onChange={e => {
+                const value = e.target.value;
+                setSelectedKeys(value ? [value] : []);
+              }}
+              style={{ width: 188, marginBottom: 8, display: 'block' }}
+            />
+            <Space>
+              <Button
+                type="primary"
+                onClick={() => {
+                  confirm();
+                  onFilter(field, selectedKeys[0]);
+                }}
+                icon={<SearchOutlined />}
+                size="small"
+                style={{ width: 90 }}
+              >
+                Search
+              </Button>
+              <Button
+                onClick={() => {
+                  clearFilters();
+                  onFilter(field, '');
+                }}
+                size="small"
+                style={{ width: 90 }}
+              >
+                Reset
+              </Button>
+            </Space>
+            <Divider style={{ margin: '8px 0' }} />
+            <Text type="secondary">
+              Too many options to display. Please use search instead.
+            </Text>
+          </div>
+        );
+      }
       
       return (
         <div style={{ padding: 8 }}>
