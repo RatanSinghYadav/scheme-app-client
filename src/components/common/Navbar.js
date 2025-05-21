@@ -19,6 +19,7 @@ import {
   BellOutlined,
   DashboardOutlined,
   FileDoneOutlined,
+  FileAddOutlined,
   UsergroupAddOutlined,
   UserAddOutlined,
   CheckOutlined,
@@ -95,7 +96,7 @@ const Navbar = ({ children }) => {
     },
     {
       key: 'additional-schemes',
-      icon: <FileDoneOutlined />,
+      icon: <FileAddOutlined />,
       label: <Link to="/schemes/additional">Additional Schemes</Link>
     }
   ];

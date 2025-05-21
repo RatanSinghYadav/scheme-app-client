@@ -41,6 +41,30 @@ const TableColumns = {
           clearFilters={clearFilters}
         />
       ),
+    },
+    {
+      title: 'City',
+      dataIndex: 'city',
+      key: 'city',
+      ...TableFilters({
+        field: 'city',
+        placeholder: 'Search city',
+        onFilter: handleGroupFilter,
+        useCheckboxFilter: true,
+        dataSource: groups
+      }),
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <CheckboxFilter
+          options={getUniqueFieldOptions('city')}
+          onFilter={handleGroupFilter}
+          field="city"
+          placeholder="Search city"
+          setSelectedKeys={setSelectedKeys}
+          selectedKeys={selectedKeys}
+          confirm={confirm}
+          clearFilters={clearFilters}
+        />
+      ),
     }
   ],
 

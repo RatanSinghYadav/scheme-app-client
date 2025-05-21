@@ -8,7 +8,7 @@ import {
     DeleteOutlined
 } from '@ant-design/icons';
 import { AuthContext } from '../context/AuthContext';
-import ExportScheme from '../components/schemes/ExportScheme';
+import BaseExportScheme from '../components/schemes/BaseExportScheme';
 import { formatDate, searchSchemes, filterSchemesByStatus } from '../utils/helpers';
 import { url } from '../utils/constent';
 
@@ -346,7 +346,7 @@ const BaseSchemeList = () => {
                     <Link to={`/base/schemes/${record.id}`}>
                         <Button type="link" size="small">View</Button>
                     </Link>
-                    <ExportScheme schemeId={record.id} schemeName={record.id} />
+                    <BaseExportScheme schemeId={record.id} schemeName={record.id} />
                     {hasRole('admin') && (
                         <Button
                             type="link"

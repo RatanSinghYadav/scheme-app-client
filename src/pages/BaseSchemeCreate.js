@@ -95,11 +95,22 @@ const BaseSchemeCreate = () => {
                     setFilteredDistributors(distributorsWithKeys);
 
                     // Extract unique groups
-                    const uniqueGroups = [...new Set(distributorsWithKeys.map(dist => dist.group))];
-                    const groupsWithKeys = uniqueGroups.map((group, index) => ({
-                        key: `group-${index}`,
-                        group: group,
-                    }));
+                    const uniqueGroups = [...new Set(distributorsWithKeys.map(dist => dist.group))].filter(group => group && group.trim() !== '');
+                    const groupsWithKeys = uniqueGroups.map((group, index) => {
+                        // Find all cities for this group
+                        const citiesForGroup = [...new Set(
+                            distributorsWithKeys
+                                .filter(d => d.group === group)
+                                .map(d => d.city)
+                                .filter(Boolean) // Remove empty cities
+                        )];
+
+                        return {
+                            key: `group-${index}`,
+                            group: group,
+                            city: citiesForGroup.join(', '), // Join all cities with comma
+                        };
+                    });
                     setGroups(groupsWithKeys);
                     setFilteredGroups(groupsWithKeys);
                 } else {
@@ -276,6 +287,12 @@ const BaseSchemeCreate = () => {
     // Get unique values for a field
     const getUniqueFieldOptions = (field) => {
         if (field === 'group') {
+            const values = [...new Set(groups.map(item => item[field]))];
+            return values.filter(Boolean).map(value => ({
+                label: String(value),
+                value: value
+            }));
+        } else if (field === 'city') {
             const values = [...new Set(groups.map(item => item[field]))];
             return values.filter(Boolean).map(value => ({
                 label: String(value),
