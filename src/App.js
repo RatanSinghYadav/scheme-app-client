@@ -17,6 +17,9 @@ import { AuthProvider } from './context/AuthContext';
 import './App.css';
 import 'antd/dist/reset.css';
 import Profile from './pages/Profile';
+import ProductManagement from './pages/ProductManagement';
+import DistributorManagement from './pages/DistributorManagement';
+import DuplicateProducts from './pages/DuplicateProducts';
 
 // यहां हम AuthContext से currentUser और hasRole को प्राप्त करेंगे
 import { useContext } from 'react';
@@ -124,6 +127,24 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
         )}
+        
+        {/* प्रोडक्ट मैनेजमेंट राउट - केवल admin role वाले users के लिए */}
+        {(currentUser && hasRole('admin')) && (
+          <Route path="/products" element={
+            <ProtectedRoute requiredRole="admin">
+              <ProductManagement />
+            </ProtectedRoute>
+          } />
+        )}
+        
+        {/* डिस्ट्रीब्यूटर मैनेजमेंट राउट - केवल admin role वाले users के लिए */}
+        {(currentUser && hasRole('admin')) && (
+          <Route path="/distributors" element={
+            <ProtectedRoute requiredRole="admin">
+              <DistributorManagement />
+            </ProtectedRoute>
+          } />
+        )}
 
         <Route path="/profile" element={
           <ProtectedRoute>
@@ -131,6 +152,8 @@ const AppContent = () => {
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
+        // राउट्स में डुप्लिकेट प्रोडक्ट्स पेज जोड़ें
+        <Route path="/duplicate-products" element={<DuplicateProducts />} />
       </Routes>
     </Navbar>
   );
