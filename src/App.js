@@ -21,6 +21,10 @@ import ProductManagement from './pages/ProductManagement';
 import DistributorManagement from './pages/DistributorManagement';
 import DuplicateProducts from './pages/DuplicateProducts';
 
+import CombinedSchemeList from './pages/CombinedSchemeList';
+import CombinedSchemeSummary from './pages/CombinedSchemeSummary';
+import CombinedSchemeDetail from './pages/CombinedSchemeDetail';
+
 // यहां हम AuthContext से currentUser और hasRole को प्राप्त करेंगे
 import { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
@@ -48,7 +52,7 @@ function App() {
   );
 }
 
-// AppContent कंपोनेंट जो AuthContext का उपयोग करेगा
+// AppContent कंपोनेंट में नए राउट्स जोड़ें
 const AppContent = () => {
   const { currentUser, hasRole } = useContext(AuthContext);
 
@@ -62,6 +66,8 @@ const AppContent = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
+
+        {/* Add new routes for combined schemes */}
         <Route path="/schemes" element={
           <ProtectedRoute>
             <Navigate to="/schemes/additional" replace />
@@ -79,6 +85,25 @@ const AppContent = () => {
             <SchemeList schemeType="additional" />
           </ProtectedRoute>
         } />
+
+        <Route path="/combined/schemes" element={
+          <ProtectedRoute>
+            <CombinedSchemeList />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/combined/schemes/summary" element={
+          <ProtectedRoute>
+            <CombinedSchemeSummary />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/combined/schemes/customer/details/:code" element={
+          <ProtectedRoute>
+            <CombinedSchemeDetail />
+          </ProtectedRoute>
+        } />
+
 
         {/* केवल creator या admin role वाले users के लिए */}
         {(currentUser && (hasRole('creator') || hasRole('admin'))) && (
@@ -127,7 +152,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
         )}
-        
+
         {/* प्रोडक्ट मैनेजमेंट राउट - केवल admin role वाले users के लिए */}
         {(currentUser && hasRole('admin')) && (
           <Route path="/products" element={
@@ -136,7 +161,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
         )}
-        
+
         {/* डिस्ट्रीब्यूटर मैनेजमेंट राउट - केवल admin role वाले users के लिए */}
         {(currentUser && hasRole('admin')) && (
           <Route path="/distributors" element={

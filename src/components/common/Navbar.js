@@ -29,8 +29,8 @@ import {
   LeftOutlined,
   RightOutlined,
   ShoppingOutlined,
-  ShopOutlined,
-  CopyOutlined
+  ShopOutlined, BarChartOutlined,
+  CopyOutlined, ReconciliationOutlined
 } from '@ant-design/icons';
 import { AuthContext } from '../../context/AuthContext';
 import Notifications from './Notifications';
@@ -85,6 +85,8 @@ const Navbar = ({ children }) => {
     if (path === '/admin') return ['admin'];
     if (path === '/products') return ['products'];
     if (path === '/distributors') return ['distributors'];
+    if (path === '/combined/schemes') return ['combined-schemes'];
+    if (path === '/combined/schemes/summary') return ['combined-summary'];
     return [];
   };
 
@@ -94,6 +96,17 @@ const Navbar = ({ children }) => {
       icon: <DashboardOutlined />,
       label: <Link to="/">Dashboard</Link>
     },
+    {
+      key: 'combined-schemes',
+      // icon: <ReconciliationOutlined />,
+      icon: <BarChartOutlined />,
+      label: <Link to="/combined/schemes">Schemes Summary</Link>,
+    },
+    // {
+    //   key: 'combined-summary',
+    //   icon: <BarChartOutlined />,
+    //   label: <Link to="/combined/schemes/summary">Combined Summary</Link>,
+    // },
     {
       key: 'base-schemes',
       icon: <FileDoneOutlined />,
@@ -137,11 +150,6 @@ const Navbar = ({ children }) => {
   }
 
   if (hasRole && hasRole('admin')) {
-    sideNavItems.push({
-      key: 'admin',
-      icon: <ToolOutlined />,
-      label: <Link to="/admin">Admin</Link>
-    });
 
     // प्रोडक्ट मैनेजमेंट लिंक
     sideNavItems.push({
@@ -155,6 +163,12 @@ const Navbar = ({ children }) => {
       key: 'distributors',
       icon: <ShopOutlined />,
       label: <Link to="/distributors">Distributors</Link>
+    });
+
+    sideNavItems.push({
+      key: 'admin',
+      icon: <ToolOutlined />,
+      label: <Link to="/admin">Admin</Link>
     });
   }
 

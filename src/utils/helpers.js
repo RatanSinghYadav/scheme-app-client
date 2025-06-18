@@ -54,8 +54,9 @@ export const searchSchemes = (schemes, searchText) => {
   
   const lowerCaseSearch = searchText.toLowerCase();
   return schemes.filter(scheme => 
-    scheme.id.toLowerCase().includes(lowerCaseSearch) ||
-    scheme.distributorName.toLowerCase().includes(lowerCaseSearch) ||
-    scheme.city.toLowerCase().includes(lowerCaseSearch)
+    (scheme.id && scheme.id.toLowerCase().includes(lowerCaseSearch)) ||
+    (scheme.schemeCode && scheme.schemeCode.toLowerCase().includes(lowerCaseSearch)) ||
+    (scheme.salesDescription && scheme.salesDescription.toLowerCase().includes(lowerCaseSearch)) ||
+    (scheme.itemName && scheme.itemName.toLowerCase().includes(lowerCaseSearch))
   );
 };
